@@ -1,0 +1,3 @@
+# Ride subtypes get their own table only when they have their own fields
+
+Every Ride has one row in `ride`, holding everything all rides share (category, height limits, manufacturer, Ride Model, dates). A category gets a one-to-one table (e.g. `ride_coaster` for height, drop, length, speed, inversions, launch) only once it has fields no other category needs. Categories without such fields (flat, dark, water, transport) are just a `category` value until they do; empty subtype tables are not created in advance. Adding a subtype table later is routine: a migration creates it, existing Rides of that category gain rows as data is filled in, and the API gains the fields additively without breaking consumers.

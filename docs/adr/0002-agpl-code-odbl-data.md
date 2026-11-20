@@ -1,0 +1,3 @@
+# Code is AGPL-3.0, data is ODbL 1.0
+
+Code is AGPL-3.0 so anyone running a modified copy as a service must publish their changes; plain GPL would not cover a hosted site, and MIT would allow a closed fork. The database content is a separate work under ODbL 1.0, so anyone building on the data must credit it and share improvements alike. Once outside contributions land, relicensing the code needs every contributor's agreement, so treat it as permanent. The data may move to another free and open data licence under the contributor terms (ADR 0011), never to a closed one. Only data from licence-compatible sources (e.g. CC0) may be imported.

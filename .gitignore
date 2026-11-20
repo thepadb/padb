@@ -1,0 +1,22 @@
+# OS / editors
+.claude
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Node / TanStack Start
+node_modules/
+dist/
+.output/
+.vinxi/
+.tanstack/
+*.log
+
+# Rust
+target/
