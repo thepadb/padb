@@ -1,0 +1,32 @@
+//! The typed content of Revisions. See ADR 0012
+
+use serde::{Deserialize, Serialize};
+
+/// One changed field: its value before the save and after. `from` is null on creation.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FieldChange<T> {
+    pub from: Option<T>,
+    pub to: Option<T>,
+}
+
+impl<T> FieldChange<T> {
+    pub fn created(value: T) -> Self {
+        Self {
+            from: None,
+            to: Some(value),
+        }
+    }
+}
+
+/// Only the Park fields a save changed. Bump `SCHEMA_VERSION` when a field is renamed or reshaped.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ParkChanges {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<FieldChange<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub country: Option<FieldChange<String>>,
+}
+
+impl ParkChanges {
+    pub const SCHEMA_VERSION: i32 = 1;
+}
