@@ -1,13 +1,7 @@
 import { createFileRoute, notFound } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { api } from '../lib/api';
-
-const PARK_PARAM = /^([0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})(?:-|$)/i;
-
-/** The Park ID at the start of `<id>-<slug>`; the slug is cosmetic and ignored. See ADR 0008 */
-function parkId(param: string): string | undefined {
-    return PARK_PARAM.exec(param)?.[1];
-}
+import { countryName, parkId } from '../lib/park';
 
 const getPark = createServerFn({ method: 'GET' })
     .validator((id: string) => id)
@@ -21,8 +15,6 @@ const getPark = createServerFn({ method: 'GET' })
         }
         return data;
     });
-
-const countryNames = new Intl.DisplayNames(['en-GB'], { type: 'region' });
 
 export const Route = createFileRoute('/parks/$park')({
     loader: async ({ params }) => {
@@ -46,7 +38,7 @@ function ParkPage() {
             <h1>{park.name}</h1>
             <dl>
                 <dt>Country</dt>
-                <dd>{countryNames.of(park.country) ?? park.country}</dd>
+                <dd>{countryName(park)}</dd>
             </dl>
         </main>
     );

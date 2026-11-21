@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/v1/parks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Parks
+         * @description Pages forwards by cursor, oldest first. See ADR 0009 and ADR 0014
+         */
+        get: operations["list_parks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/parks/{id}": {
         parameters: {
             query?: never;
@@ -46,6 +66,12 @@ export interface components {
             /** @description The Resort this Park belongs to; always null until Resorts exist */
             resort: null;
         };
+        /** @description One page of Parks, oldest first. */
+        ParkPage: {
+            /** @description Opaque; pass back as `after` for the next page. Null on the last page */
+            next: string | null;
+            parks: components["schemas"]["Park"][];
+        };
     };
     responses: never;
     parameters: never;
@@ -55,6 +81,45 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_parks: {
+        parameters: {
+            query?: {
+                /** @description The `next` cursor from the previous page; leave out for the first page */
+                after?: string;
+                /** @description How many Parks to return */
+                limit?: number;
+                /**
+                 * @description Only Parks in this ISO 3166-1 alpha-2 country code
+                 * @example GB
+                 */
+                country?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of Parks */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParkPage"];
+                };
+            };
+            /** @description The cursor, limit or country cannot be read */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     get_park: {
         parameters: {
             query?: never;
