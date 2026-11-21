@@ -1,0 +1,28 @@
+# Local development services. See ADR 0015
+services:
+    db:
+        image: postgis/postgis:18-3.7
+        # Image is amd64-only; Apple Silicon runs it via emulation (Rosetta)
+        platform: linux/amd64
+        environment:
+            POSTGRES_USER: padb
+            POSTGRES_PASSWORD: padb
+            POSTGRES_DB: padb
+        ports:
+            # Override with DB_PORT if 5432 is taken
+            - "127.0.0.1:${DB_PORT:-5432}:5432"
+        volumes:
+            # Postgres 18+ images keep data under /var/lib/postgresql/<major>
+            - db-data:/var/lib/postgresql
+        tmpfs:
+            # Hides the image's 10_postgis.sh, which would run CREATE EXTENSION postgis. See ADR 0015
+            - /docker-entrypoint-initdb.d
+        healthcheck:
+            # Over TCP, so the socket-only server used during first-run init does not count as healthy
+            test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U padb -d padb"]
+            interval: 2s
+            timeout: 5s
+            retries: 15
+
+volumes:
+    db-data:

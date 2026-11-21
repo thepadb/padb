@@ -1,0 +1,9 @@
+[workspace]
+resolver = "3"
+members = ["apps/api"]
+
+[workspace.package]
+edition = "2024"
+# See ADR 0002
+license = "AGPL-3.0-only"
+publish = false

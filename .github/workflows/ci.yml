@@ -1,0 +1,31 @@
+name: CI
+
+on:
+    pull_request:
+    push:
+        branches: [main]
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    check:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            # Toolchain and components come from rust-toolchain.toml
+            - uses: dtolnay/rust-toolchain@stable
+            - uses: Swatinem/rust-cache@v2
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v7
+              with:
+                  node-version-file: .node-version
+                  cache: pnpm
+            - uses: extractions/setup-just@v4
+            - run: pnpm install --frozen-lockfile
+            - run: just lint
+            - run: just test

@@ -18,7 +18,7 @@ Parks & Attractions Database (PADB): an open, community-edited database of parks
 * API: Rust in `apps/api`: axum, sqlx (compile-checked SQL and migrations, no ORM), utoipa for the OpenAPI spec
 * Database: PostgreSQL on the `postgis/postgis` image (ADR 0015)
 * API client: generated from the OpenAPI spec with openapi-typescript and openapi-fetch, in `packages/`
-* Tooling: Cargo workspace, pnpm workspace, `just` for shared commands
+* Tooling: Cargo workspace, pnpm workspace, `just` for shared commands, Biome for JS/TS/JSON lint and format
 * Deploys: GitHub Actions builds images, pushes to GHCR; Dokploy deploys them
 
 Do not introduce other major dependencies without an issue agreeing the choice.
