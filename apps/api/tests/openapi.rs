@@ -22,7 +22,7 @@ async fn spec_lists_only_public_routes(db: PgPool) {
         })
         .collect();
     operations.sort();
-    assert_eq!(operations, vec!["GET /v1/parks/{id}"]);
+    assert_eq!(operations, vec!["GET /v1/parks", "GET /v1/parks/{id}"]);
 }
 
 #[sqlx::test]

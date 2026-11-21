@@ -18,7 +18,7 @@ use utoipa_scalar::{Scalar, Servable};
         title = "Parks & Attractions Database API",
         license(name = "AGPL-3.0-only")
     ),
-    paths(parks::get_park)
+    paths(parks::list_parks, parks::get_park)
 )]
 struct PublicApi;
 
@@ -30,6 +30,7 @@ pub fn public_router(db: PgPool) -> Router {
             "/openapi.json",
             get(|| async { Json(PublicApi::openapi()) }),
         )
+        .route("/v1/parks", get(parks::list_parks))
         .route("/v1/parks/{id}", get(parks::get_park))
         .with_state(db)
         .merge(Scalar::with_url("/docs", PublicApi::openapi()))
