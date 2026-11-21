@@ -10,6 +10,8 @@ use utoipa::ToSchema;
 pub enum ApiError {
     /// The request was understood but its content is refused.
     Invalid(String),
+    /// The request could not be read, such as a malformed query parameter.
+    BadRequest(String),
     NotFound(&'static str),
     Database(sqlx::Error),
 }
@@ -30,6 +32,7 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, error) = match self {
             Self::Invalid(message) => (StatusCode::UNPROCESSABLE_ENTITY, message),
+            Self::BadRequest(message) => (StatusCode::BAD_REQUEST, message),
             Self::NotFound(what) => (StatusCode::NOT_FOUND, format!("{what} not found")),
             Self::Database(error) => {
                 eprintln!("database error: {error}");

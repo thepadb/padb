@@ -1,13 +1,14 @@
-//! Creating and reading Parks.
+//! Creating, listing and reading Parks.
 
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::rejection::QueryRejection;
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use sqlx::types::Json as JsonColumn;
-use utoipa::ToSchema;
 use utoipa::openapi::schema::{ObjectBuilder, Type};
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::country;
@@ -30,6 +31,18 @@ pub struct Park {
     /// See ADR 0009
     #[schema(schema_with = always_null)]
     pub resort: (),
+}
+
+impl Park {
+    /// A Park as stored; it has no Resort until Resorts exist.
+    fn new(id: Uuid, name: String, country: String) -> Self {
+        Self {
+            id,
+            name,
+            country,
+            resort: (),
+        }
+    }
 }
 
 fn always_null() -> ObjectBuilder {
@@ -64,6 +77,112 @@ impl NewPark {
     }
 }
 
+/// How many Parks a page holds when no `limit` is given.
+const DEFAULT_LIMIT: i64 = 50;
+/// The most Parks a page may hold.
+const MAX_LIMIT: i64 = 100;
+
+/// What a list of Parks is narrowed and paged by. Read as text so a bad value gets a JSON error.
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct ListParks {
+    /// The `next` cursor from the previous page; leave out for the first page
+    after: Option<String>,
+    /// How many Parks to return
+    // utoipa takes only literals here; a test keeps them matching MAX_LIMIT and DEFAULT_LIMIT
+    #[param(value_type = Option<u32>, minimum = 1, maximum = 100, default = 50)]
+    limit: Option<String>,
+    /// Only Parks in this ISO 3166-1 alpha-2 country code
+    #[param(example = "GB")]
+    country: Option<String>,
+}
+
+/// One page of Parks, oldest first.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ParkPage {
+    pub parks: Vec<Park>,
+    /// Opaque; pass back as `after` for the next page. Null on the last page
+    #[schema(required)]
+    pub next: Option<String>,
+}
+
+impl ListParks {
+    /// Refuses cursors, limits and countries that cannot be read, returning the Park to list after, the page size and the country.
+    fn validate(self) -> Result<(Option<Uuid>, i64, Option<String>), ApiError> {
+        // A cursor is the last listed Park's ID, which orders by creation. See ADR 0008
+        let after = self
+            .after
+            .map(|cursor| {
+                Uuid::parse_str(&cursor)
+                    .map_err(|_| ApiError::BadRequest(format!("{cursor:?} is not a cursor")))
+            })
+            .transpose()?;
+        let limit = match self.limit {
+            None => DEFAULT_LIMIT,
+            Some(limit) => limit
+                .parse()
+                .ok()
+                .filter(|limit| (1..=MAX_LIMIT).contains(limit))
+                .ok_or_else(|| {
+                    ApiError::BadRequest(format!(
+                        "limit must be a whole number from 1 to {MAX_LIMIT}, not {limit:?}"
+                    ))
+                })?,
+        };
+        if let Some(country) = &self.country
+            && !country::is_alpha_2(country)
+        {
+            return Err(ApiError::BadRequest(format!(
+                "{country:?} is not an ISO 3166-1 alpha-2 country code"
+            )));
+        }
+        Ok((after, limit, self.country))
+    }
+}
+
+/// List Parks
+///
+/// Pages forwards by cursor, oldest first. See ADR 0009 and ADR 0014
+#[utoipa::path(
+    get,
+    path = "/v1/parks",
+    params(ListParks),
+    responses(
+        (status = 200, description = "A page of Parks", body = ParkPage),
+        (status = 400, description = "The cursor, limit or country cannot be read", body = ErrorBody),
+    ),
+)]
+pub async fn list_parks(
+    State(db): State<PgPool>,
+    query: Result<Query<ListParks>, QueryRejection>,
+) -> Result<Json<ParkPage>, ApiError> {
+    let Query(query) = query.map_err(|rejection| ApiError::BadRequest(rejection.body_text()))?;
+    let (after, limit, country) = query.validate()?;
+    // One more than the page holds, to learn whether another page follows
+    let mut rows = sqlx::query!(
+        "SELECT id, name, country FROM park
+         WHERE ($1::uuid IS NULL OR id > $1) AND ($2::char(2) IS NULL OR country = $2)
+         ORDER BY id
+         LIMIT $3",
+        after,
+        country,
+        limit + 1,
+    )
+    .fetch_all(&db)
+    .await?;
+    let next = if rows.len() as i64 > limit {
+        rows.truncate(limit as usize);
+        rows.last().map(|park| park.id.to_string())
+    } else {
+        None
+    };
+    let parks = rows
+        .into_iter()
+        .map(|park| Park::new(park.id, park.name, park.country))
+        .collect();
+    Ok(Json(ParkPage { parks, next }))
+}
+
 /// Get a Park
 #[utoipa::path(
     get,
@@ -82,12 +201,7 @@ pub async fn get_park(
         .fetch_optional(&db)
         .await?
         .ok_or(ApiError::NotFound("Park"))?;
-    Ok(Json(Park {
-        id: park.id,
-        name: park.name,
-        country: park.country,
-        resort: (),
-    }))
+    Ok(Json(Park::new(park.id, park.name, park.country)))
 }
 
 /// Creates a Park, its first Revision and its Change Feed entry in one transaction. See ADR 0011 and ADR 0012
@@ -130,13 +244,5 @@ pub async fn create_park(
     .await?;
 
     tx.commit().await?;
-    Ok((
-        StatusCode::CREATED,
-        Json(Park {
-            id,
-            name,
-            country,
-            resort: (),
-        }),
-    ))
+    Ok((StatusCode::CREATED, Json(Park::new(id, name, country))))
 }
