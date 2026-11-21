@@ -24,6 +24,11 @@ api:
 website:
     pnpm --filter @padb/website dev
 
+# Regenerate the API client from the running API's OpenAPI spec (set API_URL if not localhost:3000)
+[group("Development")]
+generate:
+    pnpm --filter @padb/api-client generate
+
 # Delete issue 7's worktree and branch with `just cleanup 7`, once its commits are all on origin/main; its prototype stays
 [group("Development")]
 cleanup issue:
