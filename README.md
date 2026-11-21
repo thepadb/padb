@@ -48,6 +48,7 @@ just serve     # start local Postgres (PostGIS image) on localhost:5432
 just migrate   # apply database migrations
 just api       # run the API: public on port 3000, internal on localhost:3001
 just website   # run the website on localhost:3100
+just generate  # regenerate packages/api-client from the running API's OpenAPI spec
 just lint      # rustfmt, clippy, Biome and TypeScript
 just format    # fix formatting
 just test      # run all tests
@@ -55,7 +56,9 @@ just down      # stop local services
 just cleanup 7 # delete a merged issue's worktree and branch
 ```
 
-Both API ports answer `GET /health`. Set `PUBLIC_ADDR` (default `0.0.0.0:3000`) or `INTERNAL_ADDR` (default `127.0.0.1:3001`) to move them; keep the internal API off any public network (ADR 0014). `just` points `DATABASE_URL` at the local database from `compose.yaml`; set it yourself to use another. If port 5432 is taken, set `DB_PORT` (e.g. `DB_PORT=55432 just serve`) and keep it set for later commands.
+Both API ports answer `GET /health`. The public API serves its OpenAPI spec at `/openapi.json` and browsable docs at `/docs` (http://localhost:3000/docs). Writes go only to the internal API, e.g. `curl -X POST localhost:3001/parks -H 'content-type: application/json' -d '{"name":"Alton Towers","country":"GB"}'`; the Park's page is then at `http://localhost:3100/parks/<id>`. The website reads the public API at `API_URL` (default `http://localhost:3000`), as does `just generate`. `packages/api-client` pins TypeScript 5 only for openapi-typescript, which needs the compiler API that TypeScript 7 dropped; the website typechecks on 7.
+
+The API's SQL is checked at compile time against the database at `DATABASE_URL`, so run `just serve` and `just migrate` before building it. Tests (`just test`) create a fresh database per test from the same server. Set `PUBLIC_ADDR` (default `0.0.0.0:3000`) or `INTERNAL_ADDR` (default `127.0.0.1:3001`) to move them; keep the internal API off any public network (ADR 0014). `just` points `DATABASE_URL` at the local database from `compose.yaml`; set it yourself to use another. If port 5432 is taken, set `DB_PORT` (e.g. `DB_PORT=55432 just serve`) and keep it set for later commands.
 
 ## Licensing
 
