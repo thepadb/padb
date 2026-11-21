@@ -15,11 +15,34 @@ concurrency:
 jobs:
     check:
         runs-on: ubuntu-latest
+        env:
+            # sqlx checks queries against it at compile time, and tests create their databases on it
+            DATABASE_URL: postgres://padb:padb@localhost:5432/padb
+        services:
+            # Matches compose.yaml. See ADR 0015
+            db:
+                image: postgis/postgis:18-3.7
+                env:
+                    POSTGRES_USER: padb
+                    POSTGRES_PASSWORD: padb
+                    POSTGRES_DB: padb
+                ports:
+                    - 5432:5432
+                # tmpfs hides the image's 10_postgis.sh, as in compose.yaml
+                options: >-
+                    --tmpfs /docker-entrypoint-initdb.d
+                    --health-cmd "pg_isready -h 127.0.0.1 -U padb -d padb"
+                    --health-interval 2s
+                    --health-timeout 5s
+                    --health-retries 15
         steps:
             - uses: actions/checkout@v7
             # Toolchain and components come from rust-toolchain.toml
             - uses: dtolnay/rust-toolchain@stable
             - uses: Swatinem/rust-cache@v2
+            - uses: taiki-e/install-action@v2
+              with:
+                  tool: sqlx-cli
             - uses: pnpm/action-setup@v6
             - uses: actions/setup-node@v7
               with:
@@ -27,5 +50,6 @@ jobs:
                   cache: pnpm
             - uses: extractions/setup-just@v4
             - run: pnpm install --frozen-lockfile
+            - run: just migrate
             - run: just lint
             - run: just test
