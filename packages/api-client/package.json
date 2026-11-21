@@ -1,0 +1,17 @@
+{
+    "name": "@padb/api-client",
+    "private": true,
+    "license": "AGPL-3.0-only",
+    "type": "module",
+    "exports": "./src/index.ts",
+    "scripts": {
+        "generate": "openapi-typescript ${API_URL:-http://localhost:3000}/openapi.json --output src/schema.gen.ts"
+    },
+    "dependencies": {
+        "openapi-fetch": "^0.17.0"
+    },
+    "devDependencies": {
+        "openapi-typescript": "^7.13.0",
+        "typescript": "^5.9.3"
+    }
+}

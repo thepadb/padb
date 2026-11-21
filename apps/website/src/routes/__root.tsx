@@ -9,6 +9,7 @@ export const Route = createRootRoute({
         ],
     }),
     component: RootDocument,
+    notFoundComponent: NotFound,
 });
 
 function RootDocument() {
@@ -22,5 +23,14 @@ function RootDocument() {
                 <Scripts />
             </body>
         </html>
+    );
+}
+
+function NotFound() {
+    return (
+        <main>
+            <h1>Not found</h1>
+            <p>There is nothing at this address. The link may be wrong.</p>
+        </main>
     );
 }
