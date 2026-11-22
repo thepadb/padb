@@ -5,7 +5,7 @@ mod error;
 mod parks;
 mod revision;
 
-use axum::routing::{get, post};
+use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use sqlx::PgPool;
 use utoipa::OpenApi;
@@ -41,6 +41,7 @@ pub fn internal_router(db: PgPool) -> Router {
     Router::new()
         .route("/health", get(health))
         .route("/parks", post(parks::create_park))
+        .route("/parks/{id}", patch(parks::update_park))
         .with_state(db)
 }
 

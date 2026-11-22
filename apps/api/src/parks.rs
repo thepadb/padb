@@ -1,12 +1,12 @@
-//! Creating, listing and reading Parks.
+//! Creating, updating, listing and reading Parks.
 
 use axum::Json;
 use axum::extract::rejection::QueryRejection;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
 use sqlx::types::Json as JsonColumn;
+use sqlx::{PgPool, Postgres, Transaction};
 use utoipa::openapi::schema::{ObjectBuilder, Type};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -63,18 +63,44 @@ pub struct NewPark {
 impl NewPark {
     /// Refuses blank names and unassigned country codes, returning the Park's fields as they will be saved.
     fn validate(self) -> Result<(String, String), ApiError> {
-        // Saved as entered, not trimmed: a Revision holds what the Contributor entered
-        if self.name.trim().is_empty() {
-            return Err(ApiError::Invalid("A Park needs a name".to_owned()));
-        }
-        if !country::is_alpha_2(&self.country) {
-            return Err(ApiError::Invalid(format!(
-                "{:?} is not an ISO 3166-1 alpha-2 country code",
-                self.country
-            )));
-        }
-        Ok((self.name, self.country))
+        Ok((validate_name(self.name)?, validate_country(self.country)?))
     }
+}
+
+/// What a save of an existing Park sends; fields left out keep their values.
+#[derive(Debug, Deserialize)]
+pub struct ParkUpdate {
+    pub name: Option<String>,
+    pub country: Option<String>,
+}
+
+impl ParkUpdate {
+    /// Refuses blank names and unassigned country codes, as on create, returning the fields sent.
+    fn validate(self) -> Result<(Option<String>, Option<String>), ApiError> {
+        Ok((
+            self.name.map(validate_name).transpose()?,
+            self.country.map(validate_country).transpose()?,
+        ))
+    }
+}
+
+/// Refuses a blank name.
+fn validate_name(name: String) -> Result<String, ApiError> {
+    // Saved as entered, not trimmed: a Revision holds what the Contributor entered
+    if name.trim().is_empty() {
+        return Err(ApiError::Invalid("A Park needs a name".to_owned()));
+    }
+    Ok(name)
+}
+
+/// Refuses a country that is not an assigned ISO 3166-1 alpha-2 code.
+fn validate_country(country: String) -> Result<String, ApiError> {
+    if !country::is_alpha_2(&country) {
+        return Err(ApiError::Invalid(format!(
+            "{country:?} is not an ISO 3166-1 alpha-2 country code"
+        )));
+    }
+    Ok(country)
 }
 
 /// How many Parks a page holds when no `limit` is given.
@@ -224,6 +250,18 @@ pub async fn create_park(
         name: Some(FieldChange::created(name.clone())),
         country: Some(FieldChange::created(country.clone())),
     };
+    record_save(&mut tx, id, changes).await?;
+
+    tx.commit().await?;
+    Ok((StatusCode::CREATED, Json(Park::new(id, name, country))))
+}
+
+/// Writes a save's Revision and Change Feed entry, inside the save's transaction. See ADR 0011 and ADR 0012
+async fn record_save(
+    tx: &mut Transaction<'_, Postgres>,
+    id: Uuid,
+    changes: ParkChanges,
+) -> Result<(), ApiError> {
     // Accepted automatically (`accepted_by` null): only the system Contributor saves, and it is past review. See ADR 0012
     sqlx::query!(
         "INSERT INTO revision (record_type, record_id, contributor_id, schema_version, changes, accepted_at)
@@ -233,16 +271,56 @@ pub async fn create_park(
         ParkChanges::SCHEMA_VERSION,
         JsonColumn(changes) as _,
     )
-    .execute(&mut *tx)
+    .execute(&mut **tx)
     .await?;
 
     sqlx::query!(
         "INSERT INTO change (record_type, record_id) VALUES ('park', $1)",
         id
     )
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+/// Updates a Park, writing a Revision of only the changed fields and a Change Feed entry in one transaction. See ADR 0011 and ADR 0012
+pub async fn update_park(
+    State(db): State<PgPool>,
+    Path(id): Path<Uuid>,
+    Json(update): Json<ParkUpdate>,
+) -> Result<Json<Park>, ApiError> {
+    let (name, country) = update.validate()?;
+    let mut tx = db.begin().await?;
+
+    // Row held `FOR UPDATE` so a concurrent save cannot change the values this Revision records as `from`
+    let current = sqlx::query!(
+        "SELECT name, country FROM park WHERE id = $1 FOR UPDATE",
+        id
+    )
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(ApiError::NotFound("Park"))?;
+
+    let name = name.unwrap_or_else(|| current.name.clone());
+    let country = country.unwrap_or_else(|| current.country.clone());
+    let changes = ParkChanges {
+        name: FieldChange::between(current.name, name.clone()),
+        country: FieldChange::between(current.country, country.clone()),
+    };
+    if changes.is_empty() {
+        return Err(ApiError::Invalid("This save changes nothing".to_owned()));
+    }
+
+    sqlx::query!(
+        "UPDATE park SET name = $2, country = $3, updated_at = now() WHERE id = $1",
+        id,
+        name,
+        country,
+    )
     .execute(&mut *tx)
     .await?;
+    record_save(&mut tx, id, changes).await?;
 
     tx.commit().await?;
-    Ok((StatusCode::CREATED, Json(Park::new(id, name, country))))
+    Ok(Json(Park::new(id, name, country)))
 }
