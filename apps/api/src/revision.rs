@@ -18,6 +18,16 @@ impl<T> FieldChange<T> {
     }
 }
 
+impl<T: PartialEq> FieldChange<T> {
+    /// The change from `from` to `to`, or none if they are equal.
+    pub fn between(from: T, to: T) -> Option<Self> {
+        (from != to).then(|| Self {
+            from: Some(from),
+            to: Some(to),
+        })
+    }
+}
+
 /// Only the Park fields a save changed. Bump `SCHEMA_VERSION` when a field is renamed or reshaped.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ParkChanges {
@@ -29,4 +39,9 @@ pub struct ParkChanges {
 
 impl ParkChanges {
     pub const SCHEMA_VERSION: i32 = 1;
+
+    /// Whether the save changed no field.
+    pub fn is_empty(&self) -> bool {
+        self.name.is_none() && self.country.is_none()
+    }
 }

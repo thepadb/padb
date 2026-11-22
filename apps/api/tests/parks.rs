@@ -3,7 +3,9 @@
 mod common;
 
 use axum::http::StatusCode;
-use common::{get_json, post_json};
+use common::{
+    StoredRevision, Write, break_writes_to, feed_entries, get_json, post_json, revisions,
+};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -57,79 +59,26 @@ async fn malformed_park_id_is_a_client_error(db: PgPool) {
     assert_eq!(status, StatusCode::BAD_REQUEST);
 }
 
-#[derive(Debug, PartialEq, sqlx::FromRow)]
-struct StoredRevision {
-    record_type: String,
-    record_id: Uuid,
-    schema_version: i32,
-    changes: Value,
-    accepted: bool,
-    accepted_by: Option<Uuid>,
-    rejected: bool,
-}
-
 #[sqlx::test]
-async fn creating_a_park_writes_one_accepted_revision_and_one_change(db: PgPool) {
+async fn creating_a_park_writes_one_accepted_system_revision_and_one_change(db: PgPool) {
     let (_, created) = create(&db, json!({ "name": "Alton Towers", "country": "GB" })).await;
     let id = Uuid::parse_str(created["id"].as_str().unwrap()).unwrap();
 
-    let revisions: Vec<StoredRevision> = sqlx::query_as(
-        "SELECT record_type::text, record_id, schema_version, changes, accepted_at IS NOT NULL AS accepted,
-             accepted_by, rejected_at IS NOT NULL AS rejected
-         FROM revision",
-    )
-    .fetch_all(&db)
-    .await
-    .unwrap();
     assert_eq!(
-        revisions,
-        vec![StoredRevision {
-            record_type: "park".to_owned(),
-            record_id: id,
-            schema_version: 1,
-            changes: json!({
+        revisions(&db).await,
+        vec![StoredRevision::accepted_system_park(
+            id,
+            json!({
                 "name": { "from": null, "to": "Alton Towers" },
                 "country": { "from": null, "to": "GB" },
-            }),
-            accepted: true,
-            accepted_by: None,
-            rejected: false,
-        }]
+            })
+        )]
     );
-
-    let changes: Vec<(String, Uuid)> =
-        sqlx::query_as("SELECT record_type::text, record_id FROM change")
-            .fetch_all(&db)
-            .await
-            .unwrap();
-    assert_eq!(changes, vec![("park".to_owned(), id)]);
-}
-
-#[sqlx::test]
-async fn revision_is_made_by_the_system_contributor(db: PgPool) {
-    create(&db, json!({ "name": "Alton Towers", "country": "GB" })).await;
-    let username: String = sqlx::query_scalar(
-        "SELECT c.username FROM revision r JOIN contributor c ON c.id = r.contributor_id",
-    )
-    .fetch_one(&db)
-    .await
-    .unwrap();
-    assert_eq!(username, "system");
-}
-
-/// Makes every insert into `table` fail, standing in for any part of a save going wrong.
-async fn break_inserts_into(db: &PgPool, table: &str) {
-    sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
-        "CREATE FUNCTION fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'broken'; END $$;
-         CREATE TRIGGER broken BEFORE INSERT ON {table} FOR EACH ROW EXECUTE FUNCTION fail();"
-    )))
-    .execute(db)
-    .await
-    .unwrap();
+    assert_eq!(feed_entries(&db).await, vec![("park".to_owned(), id)]);
 }
 
 async fn assert_failed_save_writes_nothing(db: PgPool, broken: &str) {
-    break_inserts_into(&db, broken).await;
+    break_writes_to(&db, Write::Insert, broken).await;
     let (status, _) = create(&db, json!({ "name": "Alton Towers", "country": "GB" })).await;
     assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
     assert_nothing_saved(&db, &format!("{broken} failed")).await;
