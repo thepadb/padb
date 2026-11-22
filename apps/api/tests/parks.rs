@@ -126,6 +126,15 @@ async fn invalid_country_codes_are_refused(db: PgPool) {
 }
 
 #[sqlx::test]
+async fn unknown_fields_are_refused(db: PgPool) {
+    assert_refused(
+        &db,
+        json!({ "name": "Alton Towers", "country": "GB", "contry": "IE" }),
+    )
+    .await;
+}
+
+#[sqlx::test]
 async fn names_are_saved_as_entered(db: PgPool) {
     let (_, created) = create(&db, json!({ "name": " Alton Towers ", "country": "GB" })).await;
     assert_eq!(created["name"], " Alton Towers ");

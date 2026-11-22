@@ -2,6 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::country::Country;
+use crate::park_name::ParkName;
+
 /// One changed field: its value before the save and after. `from` is null on creation.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FieldChange<T> {
@@ -32,9 +35,9 @@ impl<T: PartialEq> FieldChange<T> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ParkChanges {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub name: Option<FieldChange<String>>,
+    pub name: Option<FieldChange<ParkName>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub country: Option<FieldChange<String>>,
+    pub country: Option<FieldChange<Country>>,
 }
 
 impl ParkChanges {

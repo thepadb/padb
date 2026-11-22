@@ -1,5 +1,28 @@
 //! Country codes Parks may record. See ADR 0009
 
+use serde::{Deserialize, Serialize};
+
+/// An officially assigned ISO 3166-1 alpha-2 code, in upper case.
+///
+/// Checked when read from a request; read from the database unchecked, where `park_country_is_alpha_2` holds it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[serde(try_from = "String")]
+#[sqlx(transparent)]
+pub struct Country(String);
+
+impl TryFrom<String> for Country {
+    type Error = String;
+
+    fn try_from(code: String) -> Result<Self, Self::Error> {
+        if !is_alpha_2(&code) {
+            return Err(format!(
+                "{code:?} is not an ISO 3166-1 alpha-2 country code"
+            ));
+        }
+        Ok(Self(code))
+    }
+}
+
 /// Officially assigned ISO 3166-1 alpha-2 codes, sorted so they can be binary searched.
 const ALPHA_2: [&str; 249] = [
     "AD", "AE", "AF", "AG", "AI", "AL", "AM", "AO", "AQ", "AR", "AS", "AT", "AU", "AW", "AX",
@@ -37,7 +60,7 @@ const ALPHA_2: [&str; 249] = [
 ];
 
 /// Whether `code` is an assigned ISO 3166-1 alpha-2 code, in upper case.
-pub fn is_alpha_2(code: &str) -> bool {
+fn is_alpha_2(code: &str) -> bool {
     ALPHA_2.binary_search(&code).is_ok()
 }
 
