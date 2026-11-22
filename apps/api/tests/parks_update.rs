@@ -227,3 +227,10 @@ async fn updates_are_not_reachable_on_the_public_router(db: PgPool) {
     }
     assert_unchanged(&db, &id, "PATCH on the public router").await;
 }
+
+#[sqlx::test]
+async fn unknown_fields_are_refused(db: PgPool) {
+    let id = create(&db).await;
+    // A misspelt name must not let the country save without it
+    assert_refused(&db, &id, json!({ "nmae": "Tayto Park", "country": "IE" })).await;
+}

@@ -1,7 +1,9 @@
 //! Creating, updating, listing and reading Parks.
 
+use std::fmt;
+
 use axum::Json;
-use axum::extract::rejection::QueryRejection;
+use axum::extract::rejection::{JsonRejection, QueryRejection};
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -11,23 +13,36 @@ use utoipa::openapi::schema::{ObjectBuilder, Type};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use crate::country;
+use crate::contributor::ContributorId;
+use crate::country::Country;
 use crate::error::{ApiError, ErrorBody};
+use crate::park_name::ParkName;
 use crate::revision::{FieldChange, ParkChanges};
 
-/// Seeded by the first migration; authors saves until Contributors sign in. See ADR 0013
-const SYSTEM_CONTRIBUTOR_ID: Uuid = Uuid::from_u128(0x00000000_0000_7000_8000_000000000001);
+/// A Park's ID. See ADR 0008
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[serde(transparent)]
+#[sqlx(transparent)]
+pub struct ParkId(Uuid);
+
+impl fmt::Display for ParkId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 /// A single fixed site with attractions.
 #[derive(Debug, Serialize, ToSchema)]
 pub struct Park {
     /// UUIDv7. See ADR 0008
-    pub id: Uuid,
+    #[schema(value_type = Uuid)]
+    pub id: ParkId,
     /// Original Name
-    pub name: String,
+    #[schema(value_type = String)]
+    pub name: ParkName,
     /// ISO 3166-1 alpha-2 country code
-    #[schema(example = "GB")]
-    pub country: String,
+    #[schema(value_type = String, example = "GB")]
+    pub country: Country,
     /// See ADR 0009
     #[schema(schema_with = always_null)]
     pub resort: (),
@@ -35,7 +50,7 @@ pub struct Park {
 
 impl Park {
     /// A Park as stored; it has no Resort until Resorts exist.
-    fn new(id: Uuid, name: String, country: String) -> Self {
+    fn new(id: ParkId, name: ParkName, country: Country) -> Self {
         Self {
             id,
             name,
@@ -53,54 +68,21 @@ fn always_null() -> ObjectBuilder {
         ))
 }
 
-/// What a save of a new Park sends.
+/// What a save of a new Park sends; names and countries are checked as they are read.
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct NewPark {
-    pub name: String,
-    pub country: String,
-}
-
-impl NewPark {
-    /// Refuses blank names and unassigned country codes, returning the Park's fields as they will be saved.
-    fn validate(self) -> Result<(String, String), ApiError> {
-        Ok((validate_name(self.name)?, validate_country(self.country)?))
-    }
+    pub name: ParkName,
+    pub country: Country,
 }
 
 /// What a save of an existing Park sends; fields left out keep their values.
 #[derive(Debug, Deserialize)]
+// A misspelt field would otherwise be dropped and the rest saved without it
+#[serde(deny_unknown_fields)]
 pub struct ParkUpdate {
-    pub name: Option<String>,
-    pub country: Option<String>,
-}
-
-impl ParkUpdate {
-    /// Refuses blank names and unassigned country codes, as on create, returning the fields sent.
-    fn validate(self) -> Result<(Option<String>, Option<String>), ApiError> {
-        Ok((
-            self.name.map(validate_name).transpose()?,
-            self.country.map(validate_country).transpose()?,
-        ))
-    }
-}
-
-/// Refuses a blank name.
-fn validate_name(name: String) -> Result<String, ApiError> {
-    // Saved as entered, not trimmed: a Revision holds what the Contributor entered
-    if name.trim().is_empty() {
-        return Err(ApiError::Invalid("A Park needs a name".to_owned()));
-    }
-    Ok(name)
-}
-
-/// Refuses a country that is not an assigned ISO 3166-1 alpha-2 code.
-fn validate_country(country: String) -> Result<String, ApiError> {
-    if !country::is_alpha_2(&country) {
-        return Err(ApiError::Invalid(format!(
-            "{country:?} is not an ISO 3166-1 alpha-2 country code"
-        )));
-    }
-    Ok(country)
+    pub name: Option<ParkName>,
+    pub country: Option<Country>,
 }
 
 /// How many Parks a page holds when no `limit` is given.
@@ -134,12 +116,13 @@ pub struct ParkPage {
 
 impl ListParks {
     /// Refuses cursors, limits and countries that cannot be read, returning the Park to list after, the page size and the country.
-    fn validate(self) -> Result<(Option<Uuid>, i64, Option<String>), ApiError> {
+    fn validate(self) -> Result<(Option<ParkId>, i64, Option<Country>), ApiError> {
         // A cursor is the last listed Park's ID, which orders by creation. See ADR 0008
         let after = self
             .after
             .map(|cursor| {
                 Uuid::parse_str(&cursor)
+                    .map(ParkId)
                     .map_err(|_| ApiError::BadRequest(format!("{cursor:?} is not a cursor")))
             })
             .transpose()?;
@@ -155,14 +138,12 @@ impl ListParks {
                     ))
                 })?,
         };
-        if let Some(country) = &self.country
-            && !country::is_alpha_2(country)
-        {
-            return Err(ApiError::BadRequest(format!(
-                "{country:?} is not an ISO 3166-1 alpha-2 country code"
-            )));
-        }
-        Ok((after, limit, self.country))
+        let country = self
+            .country
+            .map(Country::try_from)
+            .transpose()
+            .map_err(ApiError::BadRequest)?;
+        Ok((after, limit, country))
     }
 }
 
@@ -186,12 +167,12 @@ pub async fn list_parks(
     let (after, limit, country) = query.validate()?;
     // One more than the page holds, to learn whether another page follows
     let mut rows = sqlx::query!(
-        "SELECT id, name, country FROM park
+        r#"SELECT id AS "id: ParkId", name AS "name: ParkName", country AS "country: Country" FROM park
          WHERE ($1::uuid IS NULL OR id > $1) AND ($2::char(2) IS NULL OR country = $2)
          ORDER BY id
-         LIMIT $3",
-        after,
-        country,
+         LIMIT $3"#,
+        after as _,
+        country as _,
         limit + 1,
     )
     .fetch_all(&db)
@@ -221,27 +202,31 @@ pub async fn list_parks(
 )]
 pub async fn get_park(
     State(db): State<PgPool>,
-    Path(id): Path<Uuid>,
+    Path(id): Path<ParkId>,
 ) -> Result<Json<Park>, ApiError> {
-    let park = sqlx::query!("SELECT id, name, country FROM park WHERE id = $1", id)
-        .fetch_optional(&db)
-        .await?
-        .ok_or(ApiError::NotFound("Park"))?;
+    let park = sqlx::query!(
+        r#"SELECT id AS "id: ParkId", name AS "name: ParkName", country AS "country: Country"
+         FROM park WHERE id = $1"#,
+        id as _
+    )
+    .fetch_optional(&db)
+    .await?
+    .ok_or(ApiError::NotFound("Park"))?;
     Ok(Json(Park::new(park.id, park.name, park.country)))
 }
 
 /// Creates a Park, its first Revision and its Change Feed entry in one transaction. See ADR 0011 and ADR 0012
 pub async fn create_park(
     State(db): State<PgPool>,
-    Json(new): Json<NewPark>,
+    new: Result<Json<NewPark>, JsonRejection>,
 ) -> Result<(StatusCode, Json<Park>), ApiError> {
-    let (name, country) = new.validate()?;
+    let Json(NewPark { name, country }) = new?;
     let mut tx = db.begin().await?;
 
     let id = sqlx::query_scalar!(
-        "INSERT INTO park (name, country) VALUES ($1, $2) RETURNING id",
-        name,
-        country
+        r#"INSERT INTO park (name, country) VALUES ($1, $2) RETURNING id AS "id: ParkId""#,
+        &name as _,
+        &country as _,
     )
     .fetch_one(&mut *tx)
     .await?;
@@ -259,15 +244,15 @@ pub async fn create_park(
 /// Writes a save's Revision and Change Feed entry, inside the save's transaction. See ADR 0011 and ADR 0012
 async fn record_save(
     tx: &mut Transaction<'_, Postgres>,
-    id: Uuid,
+    id: ParkId,
     changes: ParkChanges,
 ) -> Result<(), ApiError> {
     // Accepted automatically (`accepted_by` null): only the system Contributor saves, and it is past review. See ADR 0012
     sqlx::query!(
         "INSERT INTO revision (record_type, record_id, contributor_id, schema_version, changes, accepted_at)
          VALUES ('park', $1, $2, $3, $4, now())",
-        id,
-        SYSTEM_CONTRIBUTOR_ID,
+        id as _,
+        ContributorId::SYSTEM as _,
         ParkChanges::SCHEMA_VERSION,
         JsonColumn(changes) as _,
     )
@@ -276,7 +261,7 @@ async fn record_save(
 
     sqlx::query!(
         "INSERT INTO change (record_type, record_id) VALUES ('park', $1)",
-        id
+        id as _
     )
     .execute(&mut **tx)
     .await?;
@@ -286,16 +271,17 @@ async fn record_save(
 /// Updates a Park, writing a Revision of only the changed fields and a Change Feed entry in one transaction. See ADR 0011 and ADR 0012
 pub async fn update_park(
     State(db): State<PgPool>,
-    Path(id): Path<Uuid>,
-    Json(update): Json<ParkUpdate>,
+    Path(id): Path<ParkId>,
+    update: Result<Json<ParkUpdate>, JsonRejection>,
 ) -> Result<Json<Park>, ApiError> {
-    let (name, country) = update.validate()?;
+    let Json(ParkUpdate { name, country }) = update?;
     let mut tx = db.begin().await?;
 
     // Row held `FOR UPDATE` so a concurrent save cannot change the values this Revision records as `from`
     let current = sqlx::query!(
-        "SELECT name, country FROM park WHERE id = $1 FOR UPDATE",
-        id
+        r#"SELECT name AS "name: ParkName", country AS "country: Country"
+         FROM park WHERE id = $1 FOR UPDATE"#,
+        id as _
     )
     .fetch_optional(&mut *tx)
     .await?
@@ -313,9 +299,9 @@ pub async fn update_park(
 
     sqlx::query!(
         "UPDATE park SET name = $2, country = $3, updated_at = now() WHERE id = $1",
-        id,
-        name,
-        country,
+        id as _,
+        &name as _,
+        &country as _,
     )
     .execute(&mut *tx)
     .await?;
