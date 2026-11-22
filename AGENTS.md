@@ -36,6 +36,7 @@ docs/agents/    Docs for agents
 
 * Every change starts from a GitHub issue.
 * Branch name: `<issue>-<short-slug>`, e.g. `12-park-schema`.
+* Worktree name: `<issue>` only, e.g. `.claude/worktrees/12`, or `<issue>-prototype` for a prototype. Never put the slug in the worktree name; `just cleanup` relies on this.
 * Commit messages: `<issue>: <summary under 80 chars>`, then a normal body.
 * PR title: `<issue>: <title>`. Body must include `Closes #<issue>`.
 * Merge by **rebase only**. Squash and merge commits are disabled. Keep history linear.
