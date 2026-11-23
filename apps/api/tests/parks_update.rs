@@ -166,6 +166,26 @@ async fn a_save_that_changes_nothing_is_refused(db: PgPool) {
 }
 
 #[sqlx::test]
+async fn null_fields_are_refused(db: PgPool) {
+    let id = create(&db).await;
+    // Null is not a field left out: it must not let the other field save alone
+    for (body, message) in [
+        (
+            json!({ "name": null, "country": "IE" }),
+            "name: invalid type: null, expected a string",
+        ),
+        (
+            json!({ "name": "Tayto Park", "country": null }),
+            "country: invalid type: null, expected a string",
+        ),
+    ] {
+        let (_, error) = update(&db, &id, body.clone()).await;
+        assert_eq!(error, json!({ "error": message }), "{body}");
+        assert_refused(&db, &id, body).await;
+    }
+}
+
+#[sqlx::test]
 async fn blank_names_are_refused(db: PgPool) {
     let id = create(&db).await;
     for name in ["", "   ", "\t\n"] {
