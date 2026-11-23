@@ -1,7 +1,9 @@
 import { createFileRoute, notFound } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { api } from '../lib/api';
+import { partialDateName } from '../lib/partial-date';
 import { countryName, parkId } from '../lib/park';
+import { statusName } from '../lib/status';
 
 const getPark = createServerFn({ method: 'GET' })
     .validator((id: string) => id)
@@ -40,6 +42,28 @@ function ParkPage() {
                 <dt>Country</dt>
                 <dd>{countryName(park)}</dd>
             </dl>
+            <h2>Status History</h2>
+            {park.status_history.length === 0 ? (
+                <p>No Status History yet.</p>
+            ) : (
+                // In the order saved, not sorted by date. See ADR 0010
+                <ol>
+                    {park.status_history.map((entry, position) => (
+                        // biome-ignore lint/suspicious/noArrayIndexKey: entries have no IDs and a Status can recur
+                        <li key={position}>
+                            {statusName(entry.status)}
+                            {entry.began ? (
+                                <>
+                                    {' from '}
+                                    <time dateTime={entry.began}>{partialDateName(entry.began)}</time>
+                                </>
+                            ) : (
+                                ', date unknown'
+                            )}
+                        </li>
+                    ))}
+                </ol>
+            )}
         </main>
     );
 }

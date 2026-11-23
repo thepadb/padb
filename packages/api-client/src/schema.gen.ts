@@ -65,12 +65,28 @@ export interface components {
             name: string;
             /** @description The Resort this Park belongs to; always null until Resorts exist */
             resort: null;
+            /** @description Every Status the Park has had, in the order saved; the last is its current Status. See ADR 0010 */
+            status_history: components["schemas"]["StatusHistoryEntry"][];
         };
         /** @description One page of Parks, oldest first. */
         ParkPage: {
             /** @description Opaque; pass back as `after` for the next page. Null on the last page */
             next: string | null;
             parks: components["schemas"]["Park"][];
+        };
+        /**
+         * @description Where something is in its life.
+         * @enum {string}
+         */
+        Status: "announced" | "under_construction" | "operating" | "refurbishing" | "sbno" | "closed" | "demolished" | "relocated";
+        /** @description One Status in a Status History, with the Partial Date it began. */
+        StatusHistoryEntry: {
+            /**
+             * @description When the Status began, as reduced-precision ISO 8601 (`2022`, `2022-11` or `2022-11-06`); null when unknown. See ADR 0010
+             * @example 2022-11
+             */
+            began: string | null;
+            status: components["schemas"]["Status"];
         };
     };
     responses: never;
