@@ -64,6 +64,28 @@ function ParkPage() {
                     ))}
                 </ol>
             )}
+            <h2>Name History</h2>
+            {park.name_history.length === 0 ? (
+                <p>No Name History yet.</p>
+            ) : (
+                // In the order saved, not sorted by date. See ADR 0010
+                <ol>
+                    {park.name_history.map((entry, position) => (
+                        // biome-ignore lint/suspicious/noArrayIndexKey: entries have no IDs and a name can recur
+                        <li key={position}>
+                            {entry.name}
+                            {entry.first_used ? (
+                                <>
+                                    {', first used '}
+                                    <time dateTime={entry.first_used}>{partialDateName(entry.first_used)}</time>
+                                </>
+                            ) : (
+                                ', date unknown'
+                            )}
+                        </li>
+                    ))}
+                </ol>
+            )}
         </main>
     );
 }
