@@ -7,7 +7,7 @@
     },
     "files": {
         "ignoreUnknown": false,
-        "includes": ["**", "!**/*.md", "!**/*.gen.ts"]
+        "includes": ["**", "!**/*.md", "!**/*.gen.ts", "!.sqlx"]
     },
     "formatter": {
         "enabled": true,

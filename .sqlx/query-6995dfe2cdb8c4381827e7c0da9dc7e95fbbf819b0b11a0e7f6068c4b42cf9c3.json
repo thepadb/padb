@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT name AS \"name: ParkName\", country AS \"country: Country\"\n         FROM park WHERE id = $1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name: ParkName",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "park",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "country: Country",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "park",
+            "name": "country"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "6995dfe2cdb8c4381827e7c0da9dc7e95fbbf819b0b11a0e7f6068c4b42cf9c3"
+}

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM park_status_history WHERE park_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9038ddaaa73e0f7fbc9250f1e02cee4948219a1c1bb616d6a378eaa1cbcef200"
+}

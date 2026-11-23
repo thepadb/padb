@@ -80,6 +80,11 @@ serve:
 down:
     docker compose down
 
+# Save the API's queries to .sqlx so images build without a database (needs sqlx-cli)
+[group("Database")]
+prepare:
+    cargo sqlx prepare --workspace
+
 # Apply database migrations (needs sqlx-cli)
 [group("Database")]
 migrate:
@@ -93,6 +98,7 @@ migrate:
 lint:
     cargo fmt --all --check
     cargo clippy --workspace --all-targets --locked -- -D warnings
+    cargo sqlx prepare --workspace --check
     pnpm lint
     pnpm -r --if-present typecheck
 

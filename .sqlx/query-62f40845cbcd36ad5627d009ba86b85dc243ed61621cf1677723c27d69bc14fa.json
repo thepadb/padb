@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO change (record_type, record_id) VALUES ('park', $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "62f40845cbcd36ad5627d009ba86b85dc243ed61621cf1677723c27d69bc14fa"
+}

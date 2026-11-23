@@ -1,0 +1,45 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO park_status_history (park_id, position, status, began_on, began_precision)\n             VALUES ($1, $2, $3, $4::text::date, $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        {
+          "Custom": {
+            "name": "status",
+            "kind": {
+              "Enum": [
+                "announced",
+                "under_construction",
+                "operating",
+                "refurbishing",
+                "sbno",
+                "closed",
+                "demolished",
+                "relocated"
+              ]
+            }
+          }
+        },
+        "Text",
+        {
+          "Custom": {
+            "name": "date_precision",
+            "kind": {
+              "Enum": [
+                "year",
+                "month",
+                "day"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e6d1757cb4dc632d51d5b03253668722b90d37210b2324abf67931e5f6831eca"
+}
