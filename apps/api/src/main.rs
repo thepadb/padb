@@ -18,6 +18,8 @@ fn socket_addr_from_env(variable: &str, default: &str) -> Result<SocketAddr, Str
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let database_url = env::var("DATABASE_URL").map_err(|_| "DATABASE_URL is not set")?;
     let db = PgPool::connect(&database_url).await?;
+    // See ADR 0017
+    sqlx::migrate!("./migrations").run(&db).await?;
 
     // Public listens everywhere; internal stays on this machine unless pointed at the private network.
     let public = TcpListener::bind(socket_addr_from_env("PUBLIC_ADDR", "0.0.0.0:3000")?).await?;
@@ -36,8 +38,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Resolves on Ctrl+C, or on SIGTERM, which is how `docker stop` asks a container to finish.
 async fn shutdown() {
-    tokio::signal::ctrl_c()
-        .await
-        .expect("Ctrl+C handler installs");
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Ctrl+C handler installs");
+    };
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("SIGTERM handler installs")
+            .recv()
+            .await;
+    };
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+    tokio::select! {
+        () = ctrl_c => {},
+        () = terminate => {},
+    }
 }
