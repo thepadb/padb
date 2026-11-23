@@ -42,6 +42,16 @@ function ParkPage() {
                 <dt>Country</dt>
                 <dd>{countryName(park)}</dd>
             </dl>
+            <h2>Areas</h2>
+            {park.areas.length === 0 ? (
+                <p>No Areas yet.</p>
+            ) : (
+                <ul>
+                    {park.areas.map(area => (
+                        <li key={area.id}>{area.name}</li>
+                    ))}
+                </ul>
+            )}
             <h2>Status History</h2>
             {park.status_history.length === 0 ? (
                 <p>No Status History yet.</p>

@@ -2,6 +2,7 @@
 import createClient from 'openapi-fetch';
 import type { components, paths } from './schema.gen';
 
+export type Area = components['schemas']['Area'];
 export type NameHistoryEntry = components['schemas']['NameHistoryEntry'];
 export type Park = components['schemas']['Park'];
 export type Status = components['schemas']['Status'];

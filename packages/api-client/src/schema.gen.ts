@@ -45,6 +45,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description A named part of one Park. */
+        Area: {
+            /**
+             * Format: uuid
+             * @description UUIDv7. See ADR 0008
+             */
+            id: string;
+            /**
+             * @description Original Name
+             * @example Fantasyland
+             */
+            name: string;
+        };
         /** @description What went wrong, in words meant for a person. */
         ErrorBody: {
             error: string;
@@ -61,6 +74,8 @@ export interface components {
         };
         /** @description A single fixed site with attractions. */
         Park: {
+            /** @description The Park's Areas, by name */
+            areas: components["schemas"]["Area"][];
             /**
              * @description ISO 3166-1 alpha-2 country code
              * @example GB
