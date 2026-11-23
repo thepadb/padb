@@ -6,7 +6,7 @@ use axum::Json;
 use axum::extract::rejection::{JsonRejection, QueryRejection};
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use sqlx::types::Json as JsonColumn;
 use sqlx::{PgPool, Postgres, Transaction};
 use utoipa::openapi::schema::{ObjectBuilder, Type};
@@ -76,13 +76,24 @@ pub struct NewPark {
     pub country: Country,
 }
 
-/// What a save of an existing Park sends; fields left out keep their values.
+/// What a save of an existing Park sends; fields left out keep their values, and fields sent as null are refused.
 #[derive(Debug, Deserialize)]
 // A misspelt field would otherwise be dropped and the rest saved without it
 #[serde(deny_unknown_fields)]
 pub struct ParkUpdate {
+    #[serde(default, deserialize_with = "present")]
     pub name: Option<ParkName>,
+    #[serde(default, deserialize_with = "present")]
     pub country: Option<Country>,
+}
+
+/// Reads a field that was sent, so null is refused rather than taken as left out.
+fn present<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    T::deserialize(deserializer).map(Some)
 }
 
 /// How many Parks a page holds when no `limit` is given.
