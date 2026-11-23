@@ -3,9 +3,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::country::Country;
+use crate::name_history::NameHistoryEntry;
 use crate::park_name::ParkName;
-use crate::partial_date::PartialDate;
-use crate::status_history::{Status, StatusHistoryEntry};
+use crate::status_history::StatusHistoryEntry;
 
 /// One changed field: its value before the save and after. `from` is null on creation.
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,6 +42,8 @@ pub struct ParkChanges {
     pub country: Option<FieldChange<Country>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub status_history: Option<StatusHistoryChange>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name_history: Option<NameHistoryChange>,
 }
 
 impl ParkChanges {
@@ -49,52 +51,61 @@ impl ParkChanges {
 
     /// Whether the save changed no field.
     pub fn is_empty(&self) -> bool {
-        self.name.is_none() && self.country.is_none() && self.status_history.is_none()
+        self.name.is_none()
+            && self.country.is_none()
+            && self.status_history.is_none()
+            && self.name_history.is_none()
     }
 }
 
-/// A Status History entry at its position, as added or removed.
+/// A history entry at its position, as added or removed.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct StatusHistoryEntryAt {
+pub struct EntryAt<E> {
     pub position: i32,
-    pub status: Status,
-    pub began: Option<PartialDate>,
+    #[serde(flatten)]
+    pub entry: E,
 }
 
-impl StatusHistoryEntryAt {
-    fn new(position: i32, entry: &StatusHistoryEntry) -> Self {
+/// A history entry that changed, at its position after the save.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EntryChange<E> {
+    pub position: i32,
+    pub from: E,
+    pub to: E,
+}
+
+/// How a save changed a Status History.
+pub type StatusHistoryChange = HistoryChange<StatusHistoryEntry>;
+/// How a save changed a Name History.
+pub type NameHistoryChange = HistoryChange<NameHistoryEntry>;
+
+/// How a save changed a history saved whole, such as Status History. Its entries have no IDs, so the lists are matched by their longest run of unchanged entries in order. See ADR 0012
+///
+/// Removed entries are at their positions before the save; added and changed entries at their positions after it.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HistoryChange<E> {
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    pub added: Vec<EntryAt<E>>,
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    pub removed: Vec<EntryAt<E>>,
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    pub changed: Vec<EntryChange<E>>,
+}
+
+// By hand, so entries need not have a default themselves
+impl<E> Default for HistoryChange<E> {
+    fn default() -> Self {
         Self {
-            position,
-            status: entry.status,
-            began: entry.began,
+            added: Vec::new(),
+            removed: Vec::new(),
+            changed: Vec::new(),
         }
     }
 }
 
-/// A Status History entry whose Status or Partial Date changed, at its position after the save.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct StatusHistoryEntryChange {
-    pub position: i32,
-    pub from: StatusHistoryEntry,
-    pub to: StatusHistoryEntry,
-}
-
-/// How a save changed a Status History. Its entries have no IDs, so the lists are matched by their longest run of unchanged entries in order. See ADR 0012
-///
-/// Removed entries are at their positions before the save; added and changed entries at their positions after it.
-#[derive(Debug, Default, Serialize, Deserialize)]
-pub struct StatusHistoryChange {
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub added: Vec<StatusHistoryEntryAt>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub removed: Vec<StatusHistoryEntryAt>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub changed: Vec<StatusHistoryEntryChange>,
-}
-
-impl StatusHistoryChange {
+impl<E: Clone + PartialEq> HistoryChange<E> {
     /// The change from `from` to `to`, or none if they are equal.
-    pub fn between(from: &[StatusHistoryEntry], to: &[StatusHistoryEntry]) -> Option<Self> {
+    pub fn between(from: &[E], to: &[E]) -> Option<Self> {
         // longest[i][j]: how many entries `from[i..]` and `to[j..]` have in common, in order
         let mut longest = vec![vec![0_usize; to.len() + 1]; from.len() + 1];
         for i in (0..from.len()).rev() {
@@ -132,28 +143,26 @@ impl StatusHistoryChange {
     }
 
     /// Records the positions `removed` from `from` and `added` to `to` between two unchanged entries, pairing them in order as changes.
-    fn record(
-        &mut self,
-        from: &[StatusHistoryEntry],
-        to: &[StatusHistoryEntry],
-        removed: &mut Vec<usize>,
-        added: &mut Vec<usize>,
-    ) {
+    fn record(&mut self, from: &[E], to: &[E], removed: &mut Vec<usize>, added: &mut Vec<usize>) {
         let paired = removed.len().min(added.len());
         for (&before, &after) in removed.iter().zip(added.iter()) {
-            self.changed.push(StatusHistoryEntryChange {
+            self.changed.push(EntryChange {
                 position: position(after),
                 from: from[before].clone(),
                 to: to[after].clone(),
             });
         }
         for &before in &removed[paired..] {
-            self.removed
-                .push(StatusHistoryEntryAt::new(position(before), &from[before]));
+            self.removed.push(EntryAt {
+                position: position(before),
+                entry: from[before].clone(),
+            });
         }
         for &after in &added[paired..] {
-            self.added
-                .push(StatusHistoryEntryAt::new(position(after), &to[after]));
+            self.added.push(EntryAt {
+                position: position(after),
+                entry: to[after].clone(),
+            });
         }
         removed.clear();
         added.clear();
@@ -161,5 +170,26 @@ impl StatusHistoryChange {
 }
 
 fn position(index: usize) -> i32 {
-    i32::try_from(index).expect("Status History fits in i32 positions")
+    i32::try_from(index).expect("histories fit in i32 positions")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn history_changes_read_back_as_written() {
+        let change = json!({
+            "added": [{ "position": 2, "name": "Alton Towers Resort", "first_used": null }],
+            "removed": [{ "position": 0, "name": "Alton Park", "first_used": "1924" }],
+            "changed": [{
+                "position": 1,
+                "from": { "name": "Alton Towers", "first_used": "1980" },
+                "to": { "name": "Alton Towers", "first_used": "1980-04" },
+            }],
+        });
+        let read: NameHistoryChange = serde_json::from_value(change.clone()).unwrap();
+        assert_eq!(serde_json::to_value(read).unwrap(), change);
+    }
 }

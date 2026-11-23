@@ -3,6 +3,7 @@
 mod contributor;
 mod country;
 mod error;
+mod name_history;
 mod park_name;
 mod parks;
 mod partial_date;
