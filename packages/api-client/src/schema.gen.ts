@@ -49,6 +49,16 @@ export interface components {
         ErrorBody: {
             error: string;
         };
+        /** @description One former name in a Name History, with the Partial Date it was first used. */
+        NameHistoryEntry: {
+            /**
+             * @description When the name was first used, as reduced-precision ISO 8601 (`2022`, `2022-11` or `2022-11-06`); null when unknown. See ADR 0010
+             * @example 1924
+             */
+            first_used: string | null;
+            /** @example Alton Park */
+            name: string;
+        };
         /** @description A single fixed site with attractions. */
         Park: {
             /**
@@ -63,6 +73,8 @@ export interface components {
             id: string;
             /** @description Original Name */
             name: string;
+            /** @description Every former name of the Park, in the order saved. See ADR 0010 */
+            name_history: components["schemas"]["NameHistoryEntry"][];
             /** @description The Resort this Park belongs to; always null until Resorts exist */
             resort: null;
             /** @description Every Status the Park has had, in the order saved; the last is its current Status. See ADR 0010 */
