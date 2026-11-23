@@ -38,7 +38,7 @@ async fn created_park_is_readable_with_no_resort(db: PgPool) {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         park,
-        json!({ "id": id, "name": "Alton Towers", "country": "GB", "resort": null })
+        json!({ "id": id, "name": "Alton Towers", "country": "GB", "resort": null, "status_history": [] })
     );
     assert_eq!(created, park);
 }
@@ -147,7 +147,7 @@ async fn refusals_say_what_is_wrong_in_plain_words(db: PgPool) {
         ),
         (
             json!({ "name": "Alton Towers", "country": "GB", "contry": "IE" }),
-            "contry: unknown field `contry`, expected `name` or `country`",
+            "contry: unknown field `contry`, expected one of `name`, `country`, `status_history`",
         ),
         (json!({ "name": "Alton Towers" }), "missing field `country`"),
     ] {

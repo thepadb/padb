@@ -5,7 +5,9 @@ mod country;
 mod error;
 mod park_name;
 mod parks;
+mod partial_date;
 mod revision;
+mod status_history;
 
 use axum::routing::{get, patch, post};
 use axum::{Json, Router};

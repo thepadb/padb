@@ -91,7 +91,7 @@ async fn parks_are_listed_as_they_are_read_one_by_one(db: PgPool) {
     assert_eq!(
         body,
         json!({
-            "parks": [{ "id": id, "name": "Alton Towers", "country": "GB", "resort": null }],
+            "parks": [{ "id": id, "name": "Alton Towers", "country": "GB", "resort": null, "status_history": [] }],
             "next": null,
         })
     );
