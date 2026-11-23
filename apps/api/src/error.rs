@@ -1,5 +1,7 @@
 //! Errors every route can answer with, as `{ "error": "..." }`.
 
+use std::error::Error;
+
 use axum::Json;
 use axum::extract::rejection::JsonRejection;
 use axum::http::StatusCode;
@@ -33,7 +35,26 @@ impl From<sqlx::Error> for ApiError {
 
 impl From<JsonRejection> for ApiError {
     fn from(rejection: JsonRejection) -> Self {
-        Self::UnreadableBody(rejection.status(), rejection.body_text())
+        // The underlying error, e.g. "name: A Park needs a name", without axum's "Failed to deserialize..." before it
+        // axum wraps the error, so search its whole chain of sources
+        let message = match std::iter::successors(rejection.source(), |error| (*error).source())
+            .find_map(|error| error.downcast_ref::<serde_path_to_error::Error<serde_json::Error>>())
+        {
+            Some(error) => without_position(error),
+            None => rejection.body_text(),
+        };
+        Self::UnreadableBody(rejection.status(), message)
+    }
+}
+
+/// `error`'s message without serde_json's trailing " at line 1 column 27", which means nothing to a person.
+fn without_position(error: &serde_path_to_error::Error<serde_json::Error>) -> String {
+    let message = error.to_string();
+    let json = error.inner();
+    let position = format!(" at line {} column {}", json.line(), json.column());
+    match message.strip_suffix(&position) {
+        Some(before) => before.to_owned(),
+        None => message,
     }
 }
 

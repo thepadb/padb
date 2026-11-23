@@ -798,6 +798,7 @@ dependencies = [
  "http-body-util",
  "serde",
  "serde_json",
+ "serde_path_to_error",
  "sqlx",
  "tokio",
  "tower",
