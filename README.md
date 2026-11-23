@@ -43,23 +43,30 @@ docs/         Project and agent docs
 ### Commands
 
 ```sh
-just install   # install JS dependencies
-just serve     # start local Postgres (PostGIS image) on localhost:5432
-just migrate   # apply database migrations
-just prepare   # save the API's queries to .sqlx after changing any SQL
-just api       # run the API: public on port 3000, internal on localhost:3001
-just website   # run the website on localhost:3100
-just generate  # regenerate packages/api-client from the running API's OpenAPI spec
-just lint      # rustfmt, clippy, Biome and TypeScript
-just format    # fix formatting
-just test      # run all tests
-just down      # stop local services
-just cleanup 7 # delete a merged issue's worktree and branch
+just install      # install JS dependencies
+just serve        # start local Postgres (PostGIS image) on localhost:5432
+just migrate      # apply database migrations
+just prepare      # save the API's queries to .sqlx after changing any SQL
+just api          # run the API: public on port 3000, internal on localhost:3001
+just website      # run the website on localhost:3100
+just generate     # regenerate packages/api-client from the running API's OpenAPI spec
+just lint         # rustfmt, clippy, Biome and TypeScript
+just format       # fix formatting
+just test         # run all tests
+just down         # stop local services
+just docker-build # build the API and website images
+just docker-up    # run both images against local Postgres
+just docker-down  # stop the images and local Postgres
+just cleanup 7    # delete a merged issue's worktree and branch
 ```
 
 Both API ports answer `GET /health`. The public API serves its OpenAPI spec at `/openapi.json` and browsable docs at `/docs` (http://localhost:3000/docs). Writes go only to the internal API, e.g. `curl -X POST localhost:3001/parks -H 'content-type: application/json' -d '{"name":"Alton Towers","country":"GB"}'`; the Park's page is then at `http://localhost:3100/parks/<id>`. Change its name or country with `curl -X PATCH localhost:3001/parks/<id> -H 'content-type: application/json' -d '{"name":"Alton Towers Resort"}'`; fields left out keep their values, and a save that changes nothing is refused. Every Park is listed at http://localhost:3100/parks (`GET /v1/parks?country=GB&limit=50` on the API, paged with each response's `next` cursor as `?after=`). The website reads the public API at `API_URL` (default `http://localhost:3000`), as does `just generate`. `packages/api-client` pins TypeScript 5 only for openapi-typescript, which needs the compiler API that TypeScript 7 dropped; the website typechecks on 7.
 
 The API's SQL is checked at compile time against the database at `DATABASE_URL`, so run `just serve` and `just migrate` before building it. Tests (`just test`) create a fresh database per test from the same server. Set `PUBLIC_ADDR` (default `0.0.0.0:3000`) or `INTERNAL_ADDR` (default `127.0.0.1:3001`) to move them; keep the internal API off any public network (ADR 0014). `just` points `DATABASE_URL` at the local database from `compose.yaml`; set it yourself to use another. If port 5432 is taken, set `DB_PORT` (e.g. `DB_PORT=55432 just serve`) and keep it set for later commands.
+
+### Images
+
+`apps/api/Dockerfile` and `apps/website/Dockerfile` build from the repo root and take all settings from environment variables: the API needs `DATABASE_URL` and applies migrations on start; the website needs `API_URL`. `just docker-up` runs them with the website on localhost:3100 and the public API on localhost:3000 (`WEBSITE_PORT` and `API_PORT` move them); the internal API is left on the Compose network, so reach it with `docker run --rm --network <project>_default curlimages/curl http://api:3001/health`. The API image builds with `SQLX_OFFLINE`, checking queries against `.sqlx`, which `just lint` keeps in step.
 
 ## Licensing
 

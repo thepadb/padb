@@ -91,6 +91,24 @@ migrate:
     sqlx migrate run --source apps/api/migrations
 
 
+##### Docker #####
+
+# Build the API and website images
+[group("Docker")]
+docker-build:
+    docker compose --profile app build
+
+# Run both images against local Postgres: website on localhost:3100, API on localhost:3000
+[group("Docker")]
+docker-up:
+    docker compose --profile app up -d --wait
+
+# Stop the images and local Postgres
+[group("Docker")]
+docker-down:
+    docker compose --profile app down
+
+
 ##### Checks #####
 
 # Check formatting and lints

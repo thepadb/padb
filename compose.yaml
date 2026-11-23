@@ -24,5 +24,34 @@ services:
             timeout: 5s
             retries: 15
 
+    # The deployed images, run locally with `just docker-up`; left out of `just serve`
+    api:
+        profiles: [app]
+        build:
+            context: .
+            dockerfile: apps/api/Dockerfile
+        image: ghcr.io/thepadb/padb-api:local
+        environment:
+            DATABASE_URL: postgres://padb:padb@db:5432/padb
+        ports:
+            # Public only; the internal port stays on the Compose network. See ADR 0014
+            - "127.0.0.1:${API_PORT:-3000}:3000"
+        depends_on:
+            db:
+                condition: service_healthy
+
+    website:
+        profiles: [app]
+        build:
+            context: .
+            dockerfile: apps/website/Dockerfile
+        image: ghcr.io/thepadb/padb-website:local
+        environment:
+            API_URL: http://api:3000
+        ports:
+            - "127.0.0.1:${WEBSITE_PORT:-3100}:3100"
+        depends_on:
+            - api
+
 volumes:
     db-data:
