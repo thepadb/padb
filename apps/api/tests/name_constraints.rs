@@ -10,6 +10,15 @@ fn refused(result: Result<sqlx::postgres::PgQueryResult, sqlx::Error>) -> bool {
 }
 
 #[sqlx::test]
+async fn blank_park_names_are_refused(db: PgPool) {
+    for name in BLANK {
+        let sql = format!("INSERT INTO park (name, country) VALUES ({name}, 'GB')");
+        let result = sqlx::query(sqlx::AssertSqlSafe(sql)).execute(&db).await;
+        assert!(refused(result), "{name}");
+    }
+}
+
+#[sqlx::test]
 async fn blank_names_are_refused_in_name_history(db: PgPool) {
     let park: (uuid::Uuid,) = sqlx::query_as(
         "INSERT INTO park (name, country) VALUES ('Alton Towers', 'GB') RETURNING id",
