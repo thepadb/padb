@@ -64,9 +64,11 @@ Both API ports answer `GET /health`. The public API serves its OpenAPI spec at `
 
 The API's SQL is checked at compile time against the database at `DATABASE_URL`, so run `just serve` and `just migrate` before building it. Tests (`just test`) create a fresh database per test from the same server. Set `PUBLIC_ADDR` (default `0.0.0.0:3000`) or `INTERNAL_ADDR` (default `127.0.0.1:3001`) to move them; keep the internal API off any public network (ADR 0014). `just` points `DATABASE_URL` at the local database from `compose.yaml`; set it yourself to use another. If port 5432 is taken, set `DB_PORT` (e.g. `DB_PORT=55432 just serve`) and keep it set for later commands.
 
-### Images
+### Images and staging
 
 `apps/api/Dockerfile` and `apps/website/Dockerfile` build from the repo root and take all settings from environment variables: the API needs `DATABASE_URL` and applies migrations on start; the website needs `API_URL`. `just docker-up` runs them with the website on localhost:3100 and the public API on localhost:3000 (`WEBSITE_PORT` and `API_PORT` move them); the internal API is left on the Compose network, so reach it with `docker run --rm --network <project>_default curlimages/curl http://api:3001/health`. The API image builds with `SQLX_OFFLINE`, checking queries against `.sqlx`, which `just lint` keeps in step.
+
+Each push to `main` runs CI, pushes both images to GHCR as `ghcr.io/thepadb/padb-{api,website}` tagged `staging` and the commit SHA, then calls the Dokploy deploy webhook in the `DOKPLOY_WEBHOOK_URL` repository secret to deploy https://staging.thepadb.org.
 
 ## Licensing
 
