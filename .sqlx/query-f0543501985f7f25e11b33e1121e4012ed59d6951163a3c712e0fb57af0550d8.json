@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO park_name_history (park_id, position, name, first_used_on, first_used_precision)\n             VALUES ($1, $2, $3, $4::text::date, $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "date_precision",
+            "kind": {
+              "Enum": [
+                "year",
+                "month",
+                "day"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f0543501985f7f25e11b33e1121e4012ed59d6951163a3c712e0fb57af0550d8"
+}

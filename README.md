@@ -46,6 +46,7 @@ docs/         Project and agent docs
 just install   # install JS dependencies
 just serve     # start local Postgres (PostGIS image) on localhost:5432
 just migrate   # apply database migrations
+just prepare   # save the API's queries to .sqlx after changing any SQL
 just api       # run the API: public on port 3000, internal on localhost:3001
 just website   # run the website on localhost:3100
 just generate  # regenerate packages/api-client from the running API's OpenAPI spec

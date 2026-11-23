@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT park_id AS \"park_id: ParkId\", id AS \"id: AreaId\", name AS \"name: AreaName\"\n         FROM area WHERE park_id = ANY($1)\n         ORDER BY park_id, name, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "park_id: ParkId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "area",
+            "name": "park_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "id: AreaId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "area",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "name: AreaName",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "area",
+            "name": "name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4164f2cf6937112323bcbfc91adee6c3af4ced99057fa2fc4e3b99336dbab1ef"
+}

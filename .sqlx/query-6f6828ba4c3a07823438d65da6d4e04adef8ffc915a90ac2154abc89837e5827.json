@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO area (park_id, name) VALUES ($1, $2) RETURNING id AS \"id: AreaId\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: AreaId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "area",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6f6828ba4c3a07823438d65da6d4e04adef8ffc915a90ac2154abc89837e5827"
+}
