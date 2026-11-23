@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::area::AreasChange;
 use crate::country::Country;
 use crate::name_history::NameHistoryEntry;
 use crate::park_name::ParkName;
@@ -44,6 +45,8 @@ pub struct ParkChanges {
     pub status_history: Option<StatusHistoryChange>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name_history: Option<NameHistoryChange>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub areas: Option<AreasChange>,
 }
 
 impl ParkChanges {
@@ -55,6 +58,7 @@ impl ParkChanges {
             && self.country.is_none()
             && self.status_history.is_none()
             && self.name_history.is_none()
+            && self.areas.is_none()
     }
 }
 

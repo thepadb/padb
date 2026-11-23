@@ -14,6 +14,7 @@ use utoipa::openapi::schema::{ObjectBuilder, Type};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
+use crate::area::{Area, AreaSave, load_areas, save_areas};
 use crate::contributor::ContributorId;
 use crate::country::Country;
 use crate::error::{ApiError, ErrorBody};
@@ -54,11 +55,19 @@ pub struct Park {
     pub status_history: Vec<StatusHistoryEntry>,
     /// Every former name of the Park, in the order saved. See ADR 0010
     pub name_history: Vec<NameHistoryEntry>,
+    /// The Park's Areas, by name
+    pub areas: Vec<Area>,
 }
 
 impl Park {
     /// A Park as stored; it has no Resort until Resorts exist.
-    fn new(id: ParkId, name: ParkName, country: Country, histories: Histories) -> Self {
+    fn new(
+        id: ParkId,
+        name: ParkName,
+        country: Country,
+        histories: Histories,
+        areas: Vec<Area>,
+    ) -> Self {
         Self {
             id,
             name,
@@ -66,6 +75,7 @@ impl Park {
             resort: (),
             status_history: histories.status,
             name_history: histories.name,
+            areas,
         }
     }
 }
@@ -97,6 +107,9 @@ pub struct NewPark {
     /// Left out when the Park has had no other name
     #[serde(default)]
     pub name_history: Vec<NameHistoryEntry>,
+    /// Left out when the Park has no Areas; none may have an ID yet
+    #[serde(default)]
+    pub areas: Vec<AreaSave>,
 }
 
 /// What a save of an existing Park sends; fields left out keep their values, and fields sent as null are refused.
@@ -114,6 +127,9 @@ pub struct ParkUpdate {
     /// Replaces the whole Name History. See ADR 0012
     #[serde(default, deserialize_with = "present")]
     pub name_history: Option<Vec<NameHistoryEntry>>,
+    /// Every Area the Park keeps: those with IDs are updated, those without added, and any left out removed. See ADR 0012
+    #[serde(default, deserialize_with = "present")]
+    pub areas: Option<Vec<AreaSave>>,
 }
 
 /// Reads a field that was sent, so null is refused rather than taken as left out.
@@ -224,12 +240,15 @@ pub async fn list_parks(
         None
     };
     let ids: Vec<ParkId> = rows.iter().map(|park| park.id).collect();
-    let mut histories = load_histories_by_park(&mut *db.acquire().await?, &ids).await?;
+    let mut conn = db.acquire().await?;
+    let mut histories = load_histories_by_park(&mut conn, &ids).await?;
+    let mut areas = load_areas(&mut *conn, &ids).await?;
     let parks = rows
         .into_iter()
         .map(|park| {
             let histories = histories.remove(&park.id).unwrap_or_default();
-            Park::new(park.id, park.name, park.country, histories)
+            let areas = areas.remove(&park.id).unwrap_or_default();
+            Park::new(park.id, park.name, park.country, histories, areas)
         })
         .collect();
     Ok(Json(ParkPage { parks, next }))
@@ -257,8 +276,16 @@ pub async fn get_park(
     .fetch_optional(&db)
     .await?
     .ok_or(ApiError::NotFound("Park"))?;
-    let histories = load_park_histories(&mut *db.acquire().await?, id).await?;
-    Ok(Json(Park::new(park.id, park.name, park.country, histories)))
+    let mut conn = db.acquire().await?;
+    let histories = load_park_histories(&mut conn, id).await?;
+    let areas = load_park_areas(&mut conn, id).await?;
+    Ok(Json(Park::new(
+        park.id,
+        park.name,
+        park.country,
+        histories,
+        areas,
+    )))
 }
 
 /// Creates a Park, its first Revision and its Change Feed entry in one transaction. See ADR 0011 and ADR 0012
@@ -271,6 +298,7 @@ pub async fn create_park(
         country,
         status_history,
         name_history,
+        areas,
     }) = new?;
     let mut tx = db.begin().await?;
 
@@ -284,15 +312,19 @@ pub async fn create_park(
 
     replace_status_history(&mut tx, id, &status_history).await?;
     replace_name_history(&mut tx, id, &name_history).await?;
+    let areas_change = save_areas(&mut tx, id, &[], areas).await?;
 
     let changes = ParkChanges {
         name: Some(FieldChange::created(name.clone())),
         country: Some(FieldChange::created(country.clone())),
         status_history: StatusHistoryChange::between(&[], &status_history),
         name_history: NameHistoryChange::between(&[], &name_history),
+        areas: areas_change,
     };
     record_save(&mut tx, id, changes).await?;
 
+    // Read back in the order they are listed
+    let areas = load_park_areas(&mut tx, id).await?;
     tx.commit().await?;
     Ok((
         StatusCode::CREATED,
@@ -304,6 +336,7 @@ pub async fn create_park(
                 status: status_history,
                 name: name_history,
             },
+            areas,
         )),
     ))
 }
@@ -346,6 +379,7 @@ pub async fn update_park(
         country,
         status_history,
         name_history,
+        areas,
     }) = update?;
     let mut tx = db.begin().await?;
 
@@ -361,6 +395,12 @@ pub async fn update_park(
 
     // Read after the Park's row is locked, so they are the histories this save replaces
     let current_histories = load_park_histories(&mut tx, id).await?;
+    let current_areas = load_park_areas(&mut tx, id).await?;
+    // Written now, as Areas get their IDs when inserted; rolled back below if the save is refused
+    let areas_change = match areas {
+        Some(areas) => save_areas(&mut tx, id, &current_areas, areas).await?,
+        None => None,
+    };
 
     let name = name.unwrap_or_else(|| current.name.clone());
     let country = country.unwrap_or_else(|| current.country.clone());
@@ -373,6 +413,7 @@ pub async fn update_park(
         name_history: name_history
             .as_ref()
             .and_then(|history| NameHistoryChange::between(&current_histories.name, history)),
+        areas: areas_change,
     };
     if changes.is_empty() {
         return Err(ApiError::Invalid("This save changes nothing".to_owned()));
@@ -392,14 +433,20 @@ pub async fn update_park(
     if let (Some(history), Some(_)) = (&name_history, &changes.name_history) {
         replace_name_history(&mut tx, id, history).await?;
     }
+    let areas_changed = changes.areas.is_some();
     record_save(&mut tx, id, changes).await?;
+    let areas = if areas_changed {
+        load_park_areas(&mut tx, id).await?
+    } else {
+        current_areas
+    };
 
     tx.commit().await?;
     let histories = Histories {
         status: status_history.unwrap_or(current_histories.status),
         name: name_history.unwrap_or(current_histories.name),
     };
-    Ok(Json(Park::new(id, name, country, histories)))
+    Ok(Json(Park::new(id, name, country, histories, areas)))
 }
 
 /// The Status Histories of the Parks `ids`, each in order; Parks with none are left out.
@@ -455,6 +502,11 @@ async fn load_park_histories(db: &mut PgConnection, id: ParkId) -> Result<Histor
         .await?
         .remove(&id)
         .unwrap_or_default())
+}
+
+/// The Areas of the Park `id`, by name.
+async fn load_park_areas(db: &mut PgConnection, id: ParkId) -> Result<Vec<Area>, sqlx::Error> {
+    Ok(load_areas(db, &[id]).await?.remove(&id).unwrap_or_default())
 }
 
 /// The Name Histories of the Parks `ids`, each in order; Parks with none are left out.

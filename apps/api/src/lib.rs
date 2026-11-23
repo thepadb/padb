@@ -1,5 +1,6 @@
 //! The PADB API: a read-only public router and a private internal router. See ADR 0014
 
+mod area;
 mod contributor;
 mod country;
 mod error;
