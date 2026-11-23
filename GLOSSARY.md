@@ -87,7 +87,7 @@ One dated running of an Event (e.g. 26 September to 2 November 2025), with the S
 _Avoid_: Edition, Instance, Year.
 
 **Name History**:
-The former names of anything in PADB, each with the dates it was used.
+The former names of anything in PADB, in order, each with the Partial Date it was first used.
 _Avoid_: Aliases, AKA.
 
 **Retheme**:
