@@ -1,0 +1,13 @@
+# Keeps the build context small and free of local secrets
+**/node_modules
+**/dist
+**/.output
+**/.vinxi
+**/.tanstack
+target
+.git
+.github
+.claude
+**/.env
+**/.env.*
+**/.DS_Store
