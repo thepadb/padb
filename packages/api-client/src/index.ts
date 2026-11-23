@@ -3,6 +3,8 @@ import createClient from 'openapi-fetch';
 import type { components, paths } from './schema.gen';
 
 export type Park = components['schemas']['Park'];
+export type Status = components['schemas']['Status'];
+export type StatusHistoryEntry = components['schemas']['StatusHistoryEntry'];
 
 export function createApiClient(baseUrl: string) {
     return createClient<paths>({ baseUrl });
