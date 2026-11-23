@@ -2,6 +2,9 @@
 export DB_PORT := env("DB_PORT", "5432")
 export DATABASE_URL := env("DATABASE_URL", "postgres://padb:padb@localhost:" + DB_PORT + "/padb")
 
+# Pinned by digest: a moved tag cannot change what scans the images
+trivy := "aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb"
+
 [private]
 default:
     @just --list
@@ -107,6 +110,14 @@ docker-up:
 [group("Docker")]
 docker-down:
     docker compose --profile app down
+
+# Fail if any image contains a secret; the images are public once pushed
+[group("Docker")]
+docker-scan *images="ghcr.io/thepadb/padb-api:local ghcr.io/thepadb/padb-website:local":
+    for image in {{ images }}; do \
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock {{ trivy }} \
+            image --quiet --scanners secret --exit-code 1 --image-src docker "$image" || exit 1; \
+    done
 
 
 ##### Checks #####

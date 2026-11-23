@@ -54,7 +54,7 @@ jobs:
             - run: just lint
             - run: just test
 
-    # Pull requests prove both images still build; on main, deploy.yml builds and pushes them
+    # Pull requests prove both images still build and hold no secrets; on main, deploy.yml builds and pushes them
     image:
         if: github.event_name == 'pull_request'
         runs-on: ubuntu-latest
@@ -64,9 +64,13 @@ jobs:
         steps:
             - uses: actions/checkout@v7
             - uses: docker/setup-buildx-action@v4
+            - uses: extractions/setup-just@v4
             - uses: docker/build-push-action@v7
               with:
                   context: .
                   file: apps/${{ matrix.app }}/Dockerfile
                   push: false
+                  load: true
+                  tags: padb-${{ matrix.app }}:scan
                   cache-from: type=gha,scope=${{ matrix.app }}
+            - run: just docker-scan padb-${{ matrix.app }}:scan
