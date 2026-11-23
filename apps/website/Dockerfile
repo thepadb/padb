@@ -11,8 +11,10 @@ COPY packages/api-client/package.json packages/api-client/
 RUN pnpm install --frozen-lockfile --filter @padb/website...
 COPY packages packages
 COPY apps/website apps/website
+# The commit the footer links to; declared late so it doesn't bust the install cache. See ADR 0011
+ARG COMMIT_SHA=""
 # The server bundles its dependencies (vite.config.ts), so the runtime needs only dist and srvx
-RUN pnpm --filter @padb/website build \
+RUN VITE_COMMIT_SHA="$COMMIT_SHA" pnpm --filter @padb/website build \
     && mkdir -p /app/node_modules \
     && cp -r apps/website/dist /app/dist \
     && cp -rL apps/website/node_modules/srvx /app/node_modules/srvx

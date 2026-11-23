@@ -45,6 +45,9 @@ services:
         build:
             context: .
             dockerfile: apps/website/Dockerfile
+            args:
+                # Unset links the footer to the repository. See ADR 0011
+                COMMIT_SHA: ${COMMIT_SHA:-}
         image: ghcr.io/thepadb/padb-website:local
         environment:
             API_URL: http://api:3000
