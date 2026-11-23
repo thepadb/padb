@@ -37,3 +37,21 @@ async fn blank_names_are_refused_in_name_history(db: PgPool) {
         assert!(refused(result), "{name}");
     }
 }
+
+#[sqlx::test]
+async fn blank_area_names_are_refused(db: PgPool) {
+    let park: (uuid::Uuid,) = sqlx::query_as(
+        "INSERT INTO park (name, country) VALUES ('Alton Towers', 'GB') RETURNING id",
+    )
+    .fetch_one(&db)
+    .await
+    .unwrap();
+    for name in BLANK {
+        let sql = format!("INSERT INTO area (park_id, name) VALUES ($1, {name})");
+        let result = sqlx::query(sqlx::AssertSqlSafe(sql))
+            .bind(park.0)
+            .execute(&db)
+            .await;
+        assert!(refused(result), "{name}");
+    }
+}
