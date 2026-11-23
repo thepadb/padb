@@ -1,5 +1,6 @@
 //! Creating, updating, listing and reading Parks.
 
+use std::collections::HashMap;
 use std::fmt;
 
 use axum::Json;
@@ -8,7 +9,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use serde::{Deserialize, Deserializer, Serialize};
 use sqlx::types::Json as JsonColumn;
-use sqlx::{PgPool, Postgres, Transaction};
+use sqlx::{PgExecutor, PgPool, Postgres, Transaction};
 use utoipa::openapi::schema::{ObjectBuilder, Type};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -17,10 +18,12 @@ use crate::contributor::ContributorId;
 use crate::country::Country;
 use crate::error::{ApiError, ErrorBody};
 use crate::park_name::ParkName;
-use crate::revision::{FieldChange, ParkChanges};
+use crate::partial_date::{DatePrecision, PartialDate};
+use crate::revision::{FieldChange, ParkChanges, StatusHistoryChange};
+use crate::status_history::{Status, StatusHistoryEntry};
 
 /// A Park's ID. See ADR 0008
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
 #[serde(transparent)]
 #[sqlx(transparent)]
 pub struct ParkId(Uuid);
@@ -46,16 +49,24 @@ pub struct Park {
     /// See ADR 0009
     #[schema(schema_with = always_null)]
     pub resort: (),
+    /// Every Status the Park has had, in the order saved; the last is its current Status. See ADR 0010
+    pub status_history: Vec<StatusHistoryEntry>,
 }
 
 impl Park {
     /// A Park as stored; it has no Resort until Resorts exist.
-    fn new(id: ParkId, name: ParkName, country: Country) -> Self {
+    fn new(
+        id: ParkId,
+        name: ParkName,
+        country: Country,
+        status_history: Vec<StatusHistoryEntry>,
+    ) -> Self {
         Self {
             id,
             name,
             country,
             resort: (),
+            status_history,
         }
     }
 }
@@ -74,6 +85,9 @@ fn always_null() -> ObjectBuilder {
 pub struct NewPark {
     pub name: ParkName,
     pub country: Country,
+    /// Left out when nothing is known of it
+    #[serde(default)]
+    pub status_history: Vec<StatusHistoryEntry>,
 }
 
 /// What a save of an existing Park sends; fields left out keep their values, and fields sent as null are refused.
@@ -85,6 +99,9 @@ pub struct ParkUpdate {
     pub name: Option<ParkName>,
     #[serde(default, deserialize_with = "present")]
     pub country: Option<Country>,
+    /// Replaces the whole Status History. See ADR 0012
+    #[serde(default, deserialize_with = "present")]
+    pub status_history: Option<Vec<StatusHistoryEntry>>,
 }
 
 /// Reads a field that was sent, so null is refused rather than taken as left out.
@@ -194,9 +211,14 @@ pub async fn list_parks(
     } else {
         None
     };
+    let ids: Vec<ParkId> = rows.iter().map(|park| park.id).collect();
+    let mut histories = load_status_histories(&db, &ids).await?;
     let parks = rows
         .into_iter()
-        .map(|park| Park::new(park.id, park.name, park.country))
+        .map(|park| {
+            let history = histories.remove(&park.id).unwrap_or_default();
+            Park::new(park.id, park.name, park.country, history)
+        })
         .collect();
     Ok(Json(ParkPage { parks, next }))
 }
@@ -223,7 +245,8 @@ pub async fn get_park(
     .fetch_optional(&db)
     .await?
     .ok_or(ApiError::NotFound("Park"))?;
-    Ok(Json(Park::new(park.id, park.name, park.country)))
+    let history = load_status_history(&db, id).await?;
+    Ok(Json(Park::new(park.id, park.name, park.country, history)))
 }
 
 /// Creates a Park, its first Revision and its Change Feed entry in one transaction. See ADR 0011 and ADR 0012
@@ -231,7 +254,11 @@ pub async fn create_park(
     State(db): State<PgPool>,
     new: Result<Json<NewPark>, JsonRejection>,
 ) -> Result<(StatusCode, Json<Park>), ApiError> {
-    let Json(NewPark { name, country }) = new?;
+    let Json(NewPark {
+        name,
+        country,
+        status_history,
+    }) = new?;
     let mut tx = db.begin().await?;
 
     let id = sqlx::query_scalar!(
@@ -242,14 +269,20 @@ pub async fn create_park(
     .fetch_one(&mut *tx)
     .await?;
 
+    replace_status_history(&mut tx, id, &status_history).await?;
+
     let changes = ParkChanges {
         name: Some(FieldChange::created(name.clone())),
         country: Some(FieldChange::created(country.clone())),
+        status_history: StatusHistoryChange::between(&[], &status_history),
     };
     record_save(&mut tx, id, changes).await?;
 
     tx.commit().await?;
-    Ok((StatusCode::CREATED, Json(Park::new(id, name, country))))
+    Ok((
+        StatusCode::CREATED,
+        Json(Park::new(id, name, country, status_history)),
+    ))
 }
 
 /// Writes a save's Revision and Change Feed entry, inside the save's transaction. See ADR 0011 and ADR 0012
@@ -285,7 +318,11 @@ pub async fn update_park(
     Path(id): Path<ParkId>,
     update: Result<Json<ParkUpdate>, JsonRejection>,
 ) -> Result<Json<Park>, ApiError> {
-    let Json(ParkUpdate { name, country }) = update?;
+    let Json(ParkUpdate {
+        name,
+        country,
+        status_history,
+    }) = update?;
     let mut tx = db.begin().await?;
 
     // Row held `FOR UPDATE` so a concurrent save cannot change the values this Revision records as `from`
@@ -298,11 +335,17 @@ pub async fn update_park(
     .await?
     .ok_or(ApiError::NotFound("Park"))?;
 
+    // Read after the Park's row is locked, so it is the history this save replaces
+    let current_history = load_status_history(&mut *tx, id).await?;
+
     let name = name.unwrap_or_else(|| current.name.clone());
     let country = country.unwrap_or_else(|| current.country.clone());
     let changes = ParkChanges {
         name: FieldChange::between(current.name, name.clone()),
         country: FieldChange::between(current.country, country.clone()),
+        status_history: status_history
+            .as_ref()
+            .and_then(|history| StatusHistoryChange::between(&current_history, history)),
     };
     if changes.is_empty() {
         return Err(ApiError::Invalid("This save changes nothing".to_owned()));
@@ -316,8 +359,82 @@ pub async fn update_park(
     )
     .execute(&mut *tx)
     .await?;
+    if let (Some(history), Some(_)) = (&status_history, &changes.status_history) {
+        replace_status_history(&mut tx, id, history).await?;
+    }
     record_save(&mut tx, id, changes).await?;
 
     tx.commit().await?;
-    Ok(Json(Park::new(id, name, country)))
+    let history = status_history.unwrap_or(current_history);
+    Ok(Json(Park::new(id, name, country, history)))
+}
+
+/// The Status Histories of the Parks `ids`, each in order; Parks with none are left out.
+async fn load_status_histories(
+    db: impl PgExecutor<'_>,
+    ids: &[ParkId],
+) -> Result<HashMap<ParkId, Vec<StatusHistoryEntry>>, sqlx::Error> {
+    let ids: Vec<Uuid> = ids.iter().map(|id| id.0).collect();
+    let rows = sqlx::query!(
+        r#"SELECT park_id AS "park_id: ParkId", status AS "status: Status",
+             to_char(began_on, 'YYYY-MM-DD') AS began_on,
+             began_precision AS "began_precision: DatePrecision"
+         FROM park_status_history WHERE park_id = ANY($1)
+         ORDER BY park_id, position"#,
+        &ids,
+    )
+    .fetch_all(db)
+    .await?;
+    let mut histories: HashMap<ParkId, Vec<StatusHistoryEntry>> = HashMap::new();
+    for row in rows {
+        let began = PartialDate::read_stored(row.began_on, row.began_precision)?;
+        histories
+            .entry(row.park_id)
+            .or_default()
+            .push(StatusHistoryEntry {
+                status: row.status,
+                began,
+            });
+    }
+    Ok(histories)
+}
+
+/// The Status History of the Park `id`, in order.
+async fn load_status_history(
+    db: impl PgExecutor<'_>,
+    id: ParkId,
+) -> Result<Vec<StatusHistoryEntry>, sqlx::Error> {
+    Ok(load_status_histories(db, &[id])
+        .await?
+        .remove(&id)
+        .unwrap_or_default())
+}
+
+/// Replaces the Park `id`'s Status History with `entries`, numbered by position, inside the save's transaction. See ADR 0012
+async fn replace_status_history(
+    tx: &mut Transaction<'_, Postgres>,
+    id: ParkId,
+    entries: &[StatusHistoryEntry],
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        "DELETE FROM park_status_history WHERE park_id = $1",
+        id as _
+    )
+    .execute(&mut **tx)
+    .await?;
+    for (position, entry) in (0_i32..).zip(entries) {
+        let (began_on, began_precision) = entry.began.map(PartialDate::stored).unzip();
+        sqlx::query!(
+            "INSERT INTO park_status_history (park_id, position, status, began_on, began_precision)
+             VALUES ($1, $2, $3, $4::text::date, $5)",
+            id as _,
+            position,
+            entry.status as _,
+            began_on,
+            began_precision as _,
+        )
+        .execute(&mut **tx)
+        .await?;
+    }
+    Ok(())
 }

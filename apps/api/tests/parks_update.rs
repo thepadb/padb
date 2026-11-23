@@ -53,7 +53,7 @@ async fn updated_park_is_readable(db: PgPool) {
     let park = read(&db, &id).await;
     assert_eq!(
         park,
-        json!({ "id": id, "name": "Alton Towers Resort", "country": "IE", "resort": null })
+        json!({ "id": id, "name": "Alton Towers Resort", "country": "IE", "resort": null, "status_history": [] })
     );
     assert_eq!(updated, park);
 }
@@ -140,7 +140,7 @@ async fn assert_refused(db: &PgPool, id: &str, body: Value) {
 async fn assert_unchanged(db: &PgPool, id: &str, after: &str) {
     assert_eq!(
         read(db, id).await,
-        json!({ "id": id, "name": "Alton Towers", "country": "GB", "resort": null }),
+        json!({ "id": id, "name": "Alton Towers", "country": "GB", "resort": null, "status_history": [] }),
         "Park changed after {after}"
     );
     assert!(
