@@ -135,6 +135,29 @@ async fn unknown_fields_are_refused(db: PgPool) {
 }
 
 #[sqlx::test]
+async fn refusals_say_what_is_wrong_in_plain_words(db: PgPool) {
+    for (body, message) in [
+        (
+            json!({ "name": " ", "country": "GB" }),
+            "name: A Park needs a name",
+        ),
+        (
+            json!({ "name": "Alton Towers", "country": "XX" }),
+            r#"country: "XX" is not an ISO 3166-1 alpha-2 country code"#,
+        ),
+        (
+            json!({ "name": "Alton Towers", "country": "GB", "contry": "IE" }),
+            "contry: unknown field `contry`, expected `name` or `country`",
+        ),
+        (json!({ "name": "Alton Towers" }), "missing field `country`"),
+    ] {
+        let (status, error) = create(&db, body.clone()).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        assert_eq!(error, json!({ "error": message }), "{body}");
+    }
+}
+
+#[sqlx::test]
 async fn names_are_saved_as_entered(db: PgPool) {
     let (_, created) = create(&db, json!({ "name": " Alton Towers ", "country": "GB" })).await;
     assert_eq!(created["name"], " Alton Towers ");
