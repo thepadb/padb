@@ -29,7 +29,7 @@ website:
 generate:
     pnpm --filter @padb/api-client generate
 
-# Delete issue 7's worktree and branch with `just cleanup 7`, once its commits are all on origin/main; its prototype stays
+# Delete issue 7's worktree, its containers and volumes, and its branch with `just cleanup 7`, once its commits are all on origin/main; its prototype stays
 [group("Development")]
 cleanup issue:
     #!/usr/bin/env bash
@@ -54,6 +54,13 @@ cleanup issue:
     fi
     root=$(git worktree list | awk '$1 ~ "/worktrees/{{issue}}$" {print $1}')
     if [[ -n "$root" ]]; then
+        # Found by working directory, since a worktree's Compose project name can be anything
+        projects=$(docker ps --all --filter "label=com.docker.compose.project.working_dir=$root" \
+            --format '{{{{.Label "com.docker.compose.project"}}' | sort -u)
+        for project in $projects; do
+            docker compose --project-name "$project" down --volumes
+            echo "Removed $project's containers and volumes"
+        done
         git worktree remove "$root"
         echo "Removed $root"
     fi
