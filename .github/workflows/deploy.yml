@@ -37,6 +37,8 @@ jobs:
                   file: apps/${{ matrix.app }}/Dockerfile
                   push: false
                   load: true
+                  # The website footer links to this commit; the api image ignores it. See ADR 0011
+                  build-args: COMMIT_SHA=${{ github.sha }}
                   tags: |
                       ghcr.io/${{ github.repository_owner }}/padb-${{ matrix.app }}:staging
                       ghcr.io/${{ github.repository_owner }}/padb-${{ matrix.app }}:${{ github.sha }}

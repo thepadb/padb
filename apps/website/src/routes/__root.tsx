@@ -1,4 +1,7 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
+import { sourceCodeLink } from '../lib/source-code';
+
+const sourceCode = sourceCodeLink(import.meta.env.VITE_COMMIT_SHA);
 
 export const Route = createRootRoute({
     head: () => ({
@@ -20,6 +23,9 @@ function RootDocument() {
             </head>
             <body>
                 <Outlet />
+                <footer>
+                    <a href={sourceCode.href}>{sourceCode.label}</a>
+                </footer>
                 <Scripts />
             </body>
         </html>
