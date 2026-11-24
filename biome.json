@@ -7,7 +7,12 @@
     },
     "files": {
         "ignoreUnknown": false,
-        "includes": ["**", "!**/*.md", "!**/*.gen.ts", "!.sqlx"]
+        "includes": [
+            "**",
+            "!**/*.md",
+            "!**/*.gen.ts",
+            "!.sqlx"
+        ]
     },
     "formatter": {
         "enabled": true,
@@ -15,7 +20,13 @@
         "indentWidth": 4,
         "lineWidth": 120
     },
-    "assist": { "actions": { "source": { "organizeImports": "off" } } },
+    "assist": {
+        "actions": {
+            "source": {
+                "organizeImports": "off"
+            }
+        }
+    },
     "linter": {
         "enabled": true,
         "rules": {
@@ -63,6 +74,11 @@
             "operatorLinebreak": "before",
             "quoteStyle": "single",
             "semicolons": "always"
+        }
+    },
+    "css": {
+        "parser": {
+            "tailwindDirectives": true
         }
     }
 }

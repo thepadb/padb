@@ -12,6 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ParksIndexRouteImport } from './routes/parks.index'
 import { Route as ParksParkRouteImport } from './routes/parks.$park'
+import { Route as ParksNewRouteImport } from './routes/parks.new'
+import { Route as ResortsResortRouteImport } from './routes/resorts.$resort'
+import { Route as RidesRideRouteImport } from './routes/rides.$ride'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,34 +31,80 @@ const ParksParkRoute = ParksParkRouteImport.update({
   path: '/parks/$park',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ParksNewRoute = ParksNewRouteImport.update({
+  id: '/parks/new',
+  path: '/parks/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResortsResortRoute = ResortsResortRouteImport.update({
+  id: '/resorts/$resort',
+  path: '/resorts/$resort',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RidesRideRoute = RidesRideRouteImport.update({
+  id: '/rides/$ride',
+  path: '/rides/$ride',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/parks/$park': typeof ParksParkRoute
+  '/parks/new': typeof ParksNewRoute
+  '/resorts/$resort': typeof ResortsResortRoute
+  '/rides/$ride': typeof RidesRideRoute
   '/parks/': typeof ParksIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/parks/$park': typeof ParksParkRoute
+  '/parks/new': typeof ParksNewRoute
+  '/resorts/$resort': typeof ResortsResortRoute
+  '/rides/$ride': typeof RidesRideRoute
   '/parks': typeof ParksIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/parks/$park': typeof ParksParkRoute
+  '/parks/new': typeof ParksNewRoute
+  '/resorts/$resort': typeof ResortsResortRoute
+  '/rides/$ride': typeof RidesRideRoute
   '/parks/': typeof ParksIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/parks/$park' | '/parks/'
+  fullPaths:
+    | '/'
+    | '/parks/$park'
+    | '/parks/new'
+    | '/resorts/$resort'
+    | '/rides/$ride'
+    | '/parks/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/parks/$park' | '/parks'
-  id: '__root__' | '/' | '/parks/$park' | '/parks/'
+  to:
+    | '/'
+    | '/parks/$park'
+    | '/parks/new'
+    | '/resorts/$resort'
+    | '/rides/$ride'
+    | '/parks'
+  id:
+    | '__root__'
+    | '/'
+    | '/parks/$park'
+    | '/parks/new'
+    | '/resorts/$resort'
+    | '/rides/$ride'
+    | '/parks/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ParksParkRoute: typeof ParksParkRoute
+  ParksNewRoute: typeof ParksNewRoute
+  ResortsResortRoute: typeof ResortsResortRoute
+  RidesRideRoute: typeof RidesRideRoute
   ParksIndexRoute: typeof ParksIndexRoute
 }
 
@@ -82,12 +131,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParksParkRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/parks/new': {
+      id: '/parks/new'
+      path: '/parks/new'
+      fullPath: '/parks/new'
+      preLoaderRoute: typeof ParksNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resorts/$resort': {
+      id: '/resorts/$resort'
+      path: '/resorts/$resort'
+      fullPath: '/resorts/$resort'
+      preLoaderRoute: typeof ResortsResortRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rides/$ride': {
+      id: '/rides/$ride'
+      path: '/rides/$ride'
+      fullPath: '/rides/$ride'
+      preLoaderRoute: typeof RidesRideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ParksParkRoute: ParksParkRoute,
+  ParksNewRoute: ParksNewRoute,
+  ResortsResortRoute: ResortsResortRoute,
+  RidesRideRoute: RidesRideRoute,
   ParksIndexRoute: ParksIndexRoute,
 }
 export const routeTree = rootRouteImport
