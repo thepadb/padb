@@ -3,7 +3,7 @@
 import type { Status } from '@padb/api-client';
 import { PencilIcon } from 'lucide-react';
 import type * as React from 'react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { inputClasses } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
@@ -11,6 +11,7 @@ import { partialDateName } from '@/lib/partial-date';
 import { statusName } from '@/lib/status';
 import { cn } from '@/lib/utils';
 import type { NameEntry, StatusEntry } from '../data';
+import { DrillTrail } from '../dates/pickers';
 import { PARTIAL_DATE, statusItems } from '../sample-form';
 import { PartialDate, StatusDot } from '../shared';
 
@@ -95,6 +96,7 @@ function Choice<T extends string>({
     );
 }
 
+/** A Partial Date field using picker B; it posts its value as `name`. */
 function DateInput({
     name,
     labelText,
@@ -108,22 +110,17 @@ function DateInput({
     defaultValue?: string | null;
     error?: string;
 }) {
+    const [value, setValue] = useState(defaultValue ?? null);
+    const id = useId();
     return (
-        <label className="block">
-            <span className={label}>
+        <div className="w-56">
+            <label htmlFor={id} className={label}>
                 {labelText}
                 {!required && ' (optional)'}
-            </span>
-            <input
-                name={name}
-                defaultValue={defaultValue ?? ''}
-                placeholder="2024, 2024-04 or 2024-04-12"
-                inputMode="numeric"
-                aria-invalid={Boolean(error)}
-                className={cn(inputClasses, 'w-48 aria-invalid:border-destructive')}
-            />
+            </label>
+            <DrillTrail id={id} name={name} value={value} onChange={setValue} invalid={Boolean(error)} />
             {error && <span className="mt-1 block text-xs font-medium text-destructive">{error}</span>}
-        </label>
+        </div>
     );
 }
 
@@ -134,7 +131,7 @@ function readDate(form: FormData, name: string, required: boolean): string | nul
     return PARTIAL_DATE.test(value) ? value : undefined;
 }
 
-const DATE_ERROR = 'Use 2024, 2024-04 or 2024-04-12.';
+const DATE_ERROR = 'Choose a date.';
 
 export type Fact = { label: string; value: React.ReactNode; raw?: string };
 

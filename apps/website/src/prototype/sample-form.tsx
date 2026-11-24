@@ -59,10 +59,13 @@ export function SampleForm({
     state,
     className,
     actions,
+    began,
 }: {
     state: ReturnType<typeof useSampleForm>;
     className?: string;
     actions: React.ReactNode;
+    /** Replaces the typed "Since" field, e.g. with a picker */
+    began?: React.ReactNode;
 }) {
     return (
         <Form
@@ -96,11 +99,13 @@ export function SampleForm({
                     <FieldLabel>Status</FieldLabel>
                     <Select items={statusItems} name="status" placeholder="Choose a Status" defaultValue="operating" />
                 </Field>
-                <Field name="began">
-                    <FieldLabel>Since</FieldLabel>
-                    <Input placeholder="2024, 2024-04 or 2024-04-12" inputMode="numeric" />
-                    <FieldError />
-                </Field>
+                {began ?? (
+                    <Field name="began">
+                        <FieldLabel>Since</FieldLabel>
+                        <Input placeholder="2024, 2024-04 or 2024-04-12" inputMode="numeric" />
+                        <FieldError />
+                    </Field>
+                )}
             </div>
             <Field name="website">
                 <FieldLabel>Website</FieldLabel>

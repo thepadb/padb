@@ -4,6 +4,7 @@
 import { Link, useSearch } from '@tanstack/react-router';
 import { ChevronRightIcon, LayoutGridIcon, ListTreeIcon, PlusIcon, SearchIcon, XIcon } from 'lucide-react';
 import type * as React from 'react';
+import { useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { inputClasses } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
@@ -23,6 +24,7 @@ import {
 import { Placeholder } from '../placeholder';
 import { PreviewLink } from '../preview-link';
 import { SampleForm, useSampleForm } from '../sample-form';
+import { DrillTrail } from '../dates/pickers';
 import { Browser, type Current, SearchDrawer } from './f-browse';
 import { type Fact, FactRow, NameHistoryTable, NameRow, StatusHistoryTable, StatusRow, usePending } from './f-facts';
 import { openedOf, PartialDate, StatusDot, useParksList } from '../shared';
@@ -551,6 +553,19 @@ export function ResortPage({ resort }: { resort: Resort }) {
     );
 }
 
+function SinceField() {
+    const [value, setValue] = useState<string | null>(null);
+    const id = useId();
+    return (
+        <div className="flex flex-col gap-1.5">
+            <label htmlFor={id} className="text-xs font-medium text-muted-foreground">
+                Since
+            </label>
+            <DrillTrail id={id} name="began" value={value} onChange={setValue} />
+        </div>
+    );
+}
+
 export function FormPage() {
     const state = useSampleForm();
     return (
@@ -566,6 +581,7 @@ export function FormPage() {
             />
             <SampleForm
                 state={state}
+                began={<SinceField />}
                 className="max-w-xl"
                 actions={
                     <div className="flex flex-wrap gap-2 border-t pt-4">

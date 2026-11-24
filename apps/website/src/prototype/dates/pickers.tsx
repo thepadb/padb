@@ -43,33 +43,74 @@ const cell = (selected: boolean, current = false) =>
         selected && 'bg-primary text-primary-foreground hover:bg-primary',
     );
 
+/** Years a decade at a time; the heading zooms out to decades, a century at a time. */
 function YearGrid({ selected, onPick }: { selected?: number; onPick: (year: number) => void }) {
-    const [start, setStart] = useState(() => Math.floor((selected ?? THIS_YEAR) / 12) * 12);
+    const [zoom, setZoom] = useState<'years' | 'decades'>('years');
+    const [decade, setDecade] = useState(() => Math.floor((selected ?? THIS_YEAR) / 10) * 10);
+    const century = Math.floor(decade / 100) * 100;
+    const years = zoom === 'years';
+    // A year either side of the decade (or a decade either side of the century) fills the 4 x 3 grid
+    const cells = Array.from({ length: 12 }, (_, i) => (years ? decade - 1 + i : century - 10 + i * 10));
+    const outside = (n: number) => (years ? n < decade || n > decade + 9 : n < century || n > century + 90);
+    const step = (by: number) => setDecade(d => d + by * (years ? 10 : 100));
     return (
         <div className="flex h-full flex-col">
             <div className="mb-1 flex items-center justify-between">
-                <Button size="sm" variant="ghost" onClick={() => setStart(s => s - 12)} aria-label="Earlier years">
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => step(-1)}
+                    aria-label={years ? 'Earlier decade' : 'Earlier century'}
+                >
                     <ChevronLeftIcon className="size-4" />
                 </Button>
-                <span className="text-xs text-muted-foreground tabular">
-                    {start} to {start + 11}
-                </span>
-                <Button size="sm" variant="ghost" onClick={() => setStart(s => s + 12)} aria-label="Later years">
+                {years ? (
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setZoom('decades')}
+                        aria-label={`${decade}s. Choose a decade`}
+                    >
+                        {decade}s
+                    </Button>
+                ) : (
+                    <span className="text-sm font-medium tabular">
+                        {century} to {century + 99}
+                    </span>
+                )}
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => step(1)}
+                    aria-label={years ? 'Later decade' : 'Later century'}
+                >
                     <ChevronRightIcon className="size-4" />
                 </Button>
             </div>
             <div className="grid min-h-0 flex-1 grid-cols-4 grid-rows-3 gap-1">
-                {Array.from({ length: 12 }, (_, i) => start + i).map(year => (
-                    <button
-                        key={year}
-                        type="button"
-                        className={cell(year === selected, year === THIS_YEAR)}
-                        aria-pressed={year === selected}
-                        onClick={() => onPick(year)}
-                    >
-                        {year}
-                    </button>
-                ))}
+                {cells.map(n => {
+                    const chosen = years
+                        ? n === selected
+                        : selected !== undefined && Math.floor(selected / 10) * 10 === n;
+                    return (
+                        <button
+                            key={n}
+                            type="button"
+                            className={cn(
+                                cell(chosen, years ? n === THIS_YEAR : n === Math.floor(THIS_YEAR / 10) * 10),
+                                outside(n) && !chosen && 'text-muted-foreground',
+                            )}
+                            aria-pressed={chosen}
+                            onClick={() => {
+                                if (years) return onPick(n);
+                                setDecade(n);
+                                setZoom('years');
+                            }}
+                        >
+                            {years ? n : `${n}s`}
+                        </button>
+                    );
+                })}
             </div>
         </div>
     );
@@ -143,7 +184,10 @@ function Trigger({
         <button
             type="button"
             {...props}
-            className={cn(inputClasses, 'flex items-center justify-between gap-2 text-left')}
+            className={cn(
+                inputClasses,
+                'flex items-center justify-between gap-2 text-left aria-invalid:border-destructive',
+            )}
         >
             {shown(value) ?? <span className="text-muted-foreground">{placeholder}</span>}
             <CalendarIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
@@ -154,7 +198,14 @@ function Trigger({
 const popup =
     'w-[19rem] origin-(--transform-origin) rounded-lg border bg-popover p-3 text-popover-foreground shadow-xl outline-none transition-[scale,opacity] duration-100 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0';
 
-type PickerProps = { value: string | null; onChange: (value: string | null) => void; id?: string };
+type PickerProps = {
+    value: string | null;
+    onChange: (value: string | null) => void;
+    id?: string;
+    /** Posts the Partial Date with its form */
+    name?: string;
+    invalid?: boolean;
+};
 
 /** The draft lives in the popup until Save; closing without saving keeps the old value. */
 function useDraft({ value, onChange }: PickerProps) {
@@ -249,7 +300,11 @@ export function DrillTrail(props: PickerProps) {
     const part = 'rounded px-1.5 py-0.5 hover:bg-muted hover:line-through';
     return (
         <Popover.Root open={state.open} onOpenChange={state.onOpenChange}>
-            <Popover.Trigger render={<Trigger value={props.value} />} id={props.id} />
+            {props.name && <input type="hidden" name={props.name} value={props.value ?? ''} />}
+            <Popover.Trigger
+                render={<Trigger value={props.value} aria-invalid={props.invalid || undefined} />}
+                id={props.id}
+            />
             <Popover.Portal>
                 <Popover.Positioner sideOffset={6} align="start" className="z-50">
                     <Popover.Popup className={popup}>
