@@ -1,9 +1,10 @@
 // PROTOTYPE (issue #41): design F's browser. A tree of Country, Destination, Park and Ride, each level
 // fetched only when opened; typing searches everything instead.
 import { Link } from '@tanstack/react-router';
-import { ChevronRightIcon, LoaderIcon } from 'lucide-react';
+import { Dialog } from '@base-ui/react/dialog';
+import { ChevronRightIcon, LoaderIcon, XIcon } from 'lucide-react';
 import type * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { inputClasses } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { countryName, findPark, type Park, parks, type Resort, resorts, ridesIn, rides } from '../data';
@@ -355,60 +356,158 @@ function search(query: string): Array<Hit> {
     });
 }
 
-function Results({ query }: { query: string }) {
+/** Results with type chips; chips with nothing in them are hidden. */
+function useResults(query: string) {
     const [scope, setScope] = useState<Kind | 'all'>('all');
     const hits = search(query);
-    const shown = hits.filter(hit => scope === 'all' || hit.kind === scope);
-    const chip = (active: boolean) =>
+    const kinds = KINDS.map(k => ({ ...k, n: hits.filter(hit => hit.kind === k.kind).length })).filter(k => k.n > 0);
+    // A chip can vanish as the query changes; fall back to everything
+    const active = kinds.some(k => k.kind === scope) ? scope : 'all';
+    return { hits, kinds, active, setScope, shown: hits.filter(hit => active === 'all' || hit.kind === active) };
+}
+
+function Chips({ results, touch = false }: { results: ReturnType<typeof useResults>; touch?: boolean }) {
+    const chip = (on: boolean) =>
         cn(
-            'rounded-md border px-2 py-0.5 text-xs hover:bg-muted',
-            active && 'border-primary bg-secondary text-secondary-foreground hover:bg-secondary',
+            'shrink-0 rounded-md border hover:bg-muted',
+            touch ? 'min-h-11 min-w-11 px-3.5 text-sm' : 'px-2 py-0.5 text-xs',
+            on && 'border-primary bg-secondary text-secondary-foreground hover:bg-secondary',
         );
+    if (results.hits.length === 0) return null;
+    return (
+        <fieldset className={cn('flex gap-1.5', touch ? 'overflow-x-auto' : 'mb-2 flex-wrap')}>
+            <legend className="sr-only">Show</legend>
+            <button
+                type="button"
+                className={chip(results.active === 'all')}
+                aria-pressed={results.active === 'all'}
+                onClick={() => results.setScope('all')}
+            >
+                All {results.hits.length}
+            </button>
+            {results.kinds.map(({ kind, label, n }) => (
+                <button
+                    key={kind}
+                    type="button"
+                    className={chip(results.active === kind)}
+                    aria-pressed={results.active === kind}
+                    onClick={() => results.setScope(kind)}
+                >
+                    {label} {n}
+                </button>
+            ))}
+        </fieldset>
+    );
+}
+
+function Hits({ query, results }: { query: string; results: ReturnType<typeof useResults> }) {
+    return results.shown.length ? (
+        <ul aria-live="polite">
+            {results.shown.map(hit => (
+                <li key={hit.key}>{hit.to}</li>
+            ))}
+        </ul>
+    ) : (
+        <p className="px-2 py-1.5 text-sm text-muted-foreground" aria-live="polite">
+            Nothing called “{query.trim()}”. Check the spelling or try a former name.
+        </p>
+    );
+}
+
+function Results({ query }: { query: string }) {
+    const results = useResults(query);
     return (
         <div>
-            <fieldset className="mb-2 flex flex-wrap gap-1">
-                <legend className="sr-only">Show</legend>
-                <button
-                    type="button"
-                    className={chip(scope === 'all')}
-                    aria-pressed={scope === 'all'}
-                    onClick={() => setScope('all')}
-                >
-                    All {hits.length}
-                </button>
-                {KINDS.map(({ kind, label }) => {
-                    const n = hits.filter(hit => hit.kind === kind).length;
-                    return (
-                        <button
-                            key={kind}
-                            type="button"
-                            className={chip(scope === kind)}
-                            aria-pressed={scope === kind}
-                            disabled={n === 0}
-                            onClick={() => setScope(kind)}
-                        >
-                            {label} {n}
-                        </button>
-                    );
-                })}
-            </fieldset>
-            {shown.length ? (
-                <ul aria-live="polite">
-                    {shown.map(hit => (
-                        <li key={hit.key}>{hit.to}</li>
-                    ))}
-                </ul>
-            ) : (
-                <p className="px-2 py-1.5 text-sm text-muted-foreground" aria-live="polite">
-                    Nothing called “{query.trim()}”. Check the spelling or try a former name.
-                </p>
-            )}
+            <Chips results={results} />
+            <Hits query={query} results={results} />
         </div>
     );
 }
 
-export function Browser({ current }: { current: Current }) {
+/** The visible part of the screen, which shrinks when an on-screen keyboard opens. */
+function useVisibleViewport() {
+    const [box, setBox] = useState<{ top: number; height: number } | null>(null);
+    useEffect(() => {
+        const viewport = window.visualViewport;
+        if (!viewport) return;
+        const update = () => setBox({ top: viewport.offsetTop, height: viewport.height });
+        update();
+        viewport.addEventListener('resize', update);
+        viewport.addEventListener('scroll', update);
+        return () => {
+            viewport.removeEventListener('resize', update);
+            viewport.removeEventListener('scroll', update);
+        };
+    }, []);
+    return box;
+}
+
+/** Mobile search: a drawer with the field at the bottom, in thumb reach, kept above the keyboard. */
+export function SearchDrawer({ trigger }: { trigger: React.ReactElement }) {
     const [query, setQuery] = useState('');
+    const input = useRef<HTMLInputElement>(null);
+    const box = useVisibleViewport();
+    const results = useResults(query);
+    const gap = 40;
+    return (
+        <Dialog.Root>
+            <Dialog.Trigger render={trigger} />
+            <Dialog.Portal>
+                <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/40 transition-opacity data-ending-style:opacity-0 data-starting-style:opacity-0" />
+                <Dialog.Popup
+                    initialFocus={input}
+                    style={box ? { top: box.top + gap, height: box.height - gap } : { top: gap, bottom: 0 }}
+                    className="fixed inset-x-0 z-50 flex flex-col rounded-t-xl border-t bg-card shadow-xl transition-transform duration-200 data-ending-style:translate-y-full data-starting-style:translate-y-full"
+                >
+                    <div className="flex items-center justify-between border-b px-4 py-1">
+                        <Dialog.Title className="text-sm font-semibold">Search</Dialog.Title>
+                        <Dialog.Close
+                            aria-label="Close"
+                            className="grid size-11 place-items-center rounded-md hover:bg-muted"
+                        >
+                            <XIcon className="size-5" />
+                        </Dialog.Close>
+                    </div>
+                    {/* Results grow up from the field, so the nearest are nearest the thumb */}
+                    <div className="flex min-h-0 flex-1 flex-col justify-end overflow-y-auto p-2 [&_a]:py-2.5">
+                        {query.trim() ? (
+                            <Hits query={query} results={results} />
+                        ) : (
+                            <p className="px-2 py-2 text-sm text-muted-foreground">
+                                Search Parks, Rides, Resorts and Hotels by current or former name.
+                            </p>
+                        )}
+                    </div>
+                    <div className="space-y-2 border-t px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+                        {query.trim() && <Chips results={results} touch />}
+                        <input
+                            ref={input}
+                            type="search"
+                            enterKeyHint="search"
+                            value={query}
+                            onChange={event => setQuery(event.target.value)}
+                            placeholder="Search Parks, Rides, Resorts, Hotels"
+                            aria-label="Search Parks, Rides, Resorts and Hotels"
+                            // 16px stops iOS zooming into the field
+                            className={cn(inputClasses, 'h-12 text-base')}
+                        />
+                    </div>
+                </Dialog.Popup>
+            </Dialog.Portal>
+        </Dialog.Root>
+    );
+}
+
+/** The tree, with search above it on wide screens. On mobile, search has its own drawer. */
+export function Browser({ current, searchable = true }: { current: Current; searchable?: boolean }) {
+    const [query, setQuery] = useState('');
+    if (!searchable) {
+        return (
+            <nav aria-label="Browse">
+                <Tree current={current} />
+            </nav>
+        );
+    }
     return (
         <nav aria-label="Browse" className="p-3">
             <input

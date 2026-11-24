@@ -2,7 +2,7 @@
 // Countries, Destinations, Parks and Rides always to hand, one sheet of detail beside it, every fact
 // editable in place. The browser is in f-browse.tsx, the editable facts in f-facts.tsx.
 import { Link, useSearch } from '@tanstack/react-router';
-import { ChevronRightIcon, XIcon } from 'lucide-react';
+import { ChevronRightIcon, LayoutGridIcon, ListTreeIcon, PlusIcon, SearchIcon, XIcon } from 'lucide-react';
 import type * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { inputClasses } from '@/components/ui/field';
@@ -23,7 +23,7 @@ import {
 import { Placeholder } from '../placeholder';
 import { PreviewLink } from '../preview-link';
 import { SampleForm, useSampleForm } from '../sample-form';
-import { Browser, type Current } from './f-browse';
+import { Browser, type Current, SearchDrawer } from './f-browse';
 import { type Fact, FactRow, NameHistoryTable, NameRow, StatusHistoryTable, StatusRow, usePending } from './f-facts';
 import { openedOf, PartialDate, StatusDot, useParksList } from '../shared';
 import { currentStatus, statusLine } from '../status-line';
@@ -38,7 +38,7 @@ export function Header() {
                 <Link to="/" className="font-semibold">
                     PADB
                 </Link>
-                <nav className="flex gap-1 text-sm [&_a]:rounded-md [&_a]:px-2.5 [&_a]:py-1 [&_a:hover]:bg-muted [&_a.active]:bg-secondary [&_a.active]:text-secondary-foreground">
+                <nav className="hidden gap-1 text-sm lg:flex [&_a]:rounded-md [&_a]:px-2.5 [&_a]:py-1 [&_a:hover]:bg-muted [&_a.active]:bg-secondary [&_a.active]:text-secondary-foreground">
                     <Link to="/parks">Parks</Link>
                     <Link to="/resorts/$resort" params={{ resort: 'lakeside' }}>
                         Resorts
@@ -59,14 +59,51 @@ function Shell({ current, children }: { current: Current; children: React.ReactN
                 </div>
             </aside>
             <div className="min-w-0 p-2 sm:p-4">
-                <div className="mb-2 lg:hidden">
-                    <Sheet title="Browse" trigger={<Button variant="outline">Browse and search</Button>}>
-                        <Browser current={current} />
-                    </Sheet>
-                </div>
                 <main className="rounded-lg border bg-card px-4 py-5 sm:px-8 sm:py-7">{children}</main>
             </div>
+            <MobileNav current={current} />
         </div>
+    );
+}
+
+const tab =
+    'flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground hover:text-foreground [&.active]:text-primary [&_svg]:size-5';
+
+/** Mobile only: the nav moves to the bottom, in thumb reach. */
+function MobileNav({ current }: { current: Current }) {
+    return (
+        <nav
+            aria-label="Main"
+            className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t bg-card pb-[env(safe-area-inset-bottom)] lg:hidden"
+        >
+            <Sheet
+                title="Browse"
+                trigger={
+                    <button type="button" className={tab}>
+                        <ListTreeIcon aria-hidden="true" />
+                        Browse
+                    </button>
+                }
+            >
+                <Browser current={current} searchable={false} />
+            </Sheet>
+            <SearchDrawer
+                trigger={
+                    <button type="button" className={tab}>
+                        <SearchIcon aria-hidden="true" />
+                        Search
+                    </button>
+                }
+            />
+            <Link to="/parks" className={tab}>
+                <LayoutGridIcon aria-hidden="true" />
+                Parks
+            </Link>
+            <Link to="/parks/new" className={tab}>
+                <PlusIcon aria-hidden="true" />
+                New Park
+            </Link>
+        </nav>
     );
 }
 
@@ -171,7 +208,7 @@ function Histories({ record }: { record: Record }) {
                 </Section>
             )}
             <Section title="Name History" count={record.names.length} action={add('Add name')}>
-                <NameHistoryTable rows={record.names} name={record.name} pending={record.pending} />
+                <NameHistoryTable rows={record.names} pending={record.pending} />
             </Section>
         </div>
     );
@@ -546,7 +583,7 @@ export function FormPage() {
 export function Footer({ children }: { children: React.ReactNode }) {
     return (
         <footer className="border-t bg-card">
-            <div className="flex flex-wrap justify-between gap-4 px-4 py-3 text-xs text-muted-foreground">
+            <div className="max-lg:pb-20 flex flex-wrap justify-between gap-4 px-4 py-3 text-xs text-muted-foreground">
                 <span>Data ODbL 1.0, code AGPL-3.0.</span>
                 {children}
             </div>

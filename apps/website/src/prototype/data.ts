@@ -351,6 +351,21 @@ export const resorts: Array<Resort> = [
     },
 ];
 
+// Name History ends with the current name, like Status History ends with the current Status (proposed in #41)
+const CURRENT_NAME_SINCE: Record<string, string> = {
+    'koeniglicher-freizeitpark': '2008',
+    nachtfalke: '2011-04',
+    lakeside: '2001',
+};
+for (const record of [...parks, ...rides, ...resorts]) {
+    if (record.nameHistory.at(-1)?.name === record.name) continue;
+    const since =
+        record.nameHistory.length === 0 && 'statusHistory' in record
+            ? (record.statusHistory[0]?.began ?? null)
+            : (CURRENT_NAME_SINCE[record.id] ?? null);
+    record.nameHistory.push({ name: record.name, first_used: since });
+}
+
 export const findPark = (id: string) => parks.find(park => park.id === id);
 export const findRide = (id: string) => rides.find(ride => ride.id === id);
 export const findResort = (id: string) => resorts.find(resort => resort.id === id);

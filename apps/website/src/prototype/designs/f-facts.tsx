@@ -16,7 +16,7 @@ import { PartialDate, StatusDot } from '../shared';
 
 /** What the user has suggested on this page. Nothing is saved: suggestions go to a Moderator. */
 export type Pending = {
-    name?: { kind: 'renamed'; to: string; from: string; oldFirstUsed: string | null } | { kind: 'fixed'; to: string };
+    name?: { kind: 'renamed'; to: string; from: string } | { kind: 'fixed'; to: string };
     status?: { kind: 'changed' | 'fixed'; entry: StatusEntry };
 };
 
@@ -26,7 +26,7 @@ export function usePending() {
 }
 
 const rowGrid =
-    'group grid grid-cols-[8rem_minmax(0,1fr)_auto] items-start gap-x-3 border-b py-2 last:border-0 sm:grid-cols-[10rem_minmax(0,1fr)_auto]';
+    'group grid grid-cols-[6.5rem_minmax(0,1fr)_auto] items-start gap-x-3 border-b py-2 last:border-0 sm:grid-cols-[10rem_minmax(0,1fr)_auto]';
 const mark = 'rounded-sm bg-accent px-1 text-accent-foreground';
 const note = 'block text-xs text-muted-foreground';
 const label = 'mb-1 block text-xs font-medium text-muted-foreground';
@@ -187,7 +187,7 @@ export function FactRow({ fact }: { fact: Fact }) {
     );
 }
 
-/** The name. A rename keeps the old name in Name History; a fix does not. See GLOSSARY: Retheme */
+/** The name is the last entry in Name History: a rename adds an entry, a fix corrects the last one. */
 export function NameRow({
     name,
     pending,
@@ -219,14 +219,10 @@ export function NameRow({
                             else if (to === name) found.value = 'That is already the name.';
                             if (kind === 'renamed') {
                                 const from = readDate(form, 'from', true);
-                                const oldFirstUsed = readDate(form, 'oldFirstUsed', false);
                                 if (from === undefined) found.from = DATE_ERROR;
-                                if (oldFirstUsed === undefined) found.oldFirstUsed = DATE_ERROR;
                                 setErrors(found);
                                 if (Object.keys(found).length) return;
-                                suggest({
-                                    name: { kind, to, from: from as string, oldFirstUsed: oldFirstUsed ?? null },
-                                });
+                                suggest({ name: { kind, to, from: from as string } });
                             } else {
                                 setErrors(found);
                                 if (Object.keys(found).length) return;
@@ -259,20 +255,13 @@ export function NameRow({
                                 <span className="mt-1 block text-xs font-medium text-destructive">{errors.value}</span>
                             )}
                         </label>
-                        {kind === 'renamed' ? (
-                            <div className="flex flex-wrap gap-4">
-                                <DateInput name="from" labelText="New name used from" required error={errors.from} />
-                                <DateInput
-                                    name="oldFirstUsed"
-                                    labelText="Old name first used"
-                                    error={errors.oldFirstUsed}
-                                />
-                            </div>
-                        ) : null}
+                        {kind === 'renamed' && (
+                            <DateInput name="from" labelText="New name first used" required error={errors.from} />
+                        )}
                         <p className="text-xs text-muted-foreground">
                             {kind === 'renamed'
-                                ? `“${name}” moves into Name History. Nothing is lost.`
-                                : 'Name History stays as it is. Use this for spelling and typos only.'}
+                                ? 'Adds the new name to the end of Name History. Earlier names stay.'
+                                : 'Corrects the last entry in Name History. Use this for spelling and typos only.'}
                         </p>
                         <Actions onCancel={() => setEditing(false)} />
                     </form>
@@ -384,7 +373,7 @@ export function StatusRow({
                 <>
                     <dd className="min-w-0 text-sm">
                         {shown ? (
-                            <span className={cn('inline-flex items-center gap-2', pending.status && mark)}>
+                            <span className={cn('inline-flex flex-wrap items-center gap-x-2', pending.status && mark)}>
                                 <StatusDot status={shown.status} className="size-2" />
                                 {statusName(shown.status)}
                                 {shown.began && (
@@ -448,13 +437,21 @@ export function StatusHistoryTable({ rows, pending }: { rows: Array<StatusEntry>
     );
 }
 
-/** Name History with a suggested rename shown in place. */
-export function NameHistoryTable({ rows, name, pending }: { rows: Array<NameEntry>; name: string; pending: Pending }) {
-    const rename = pending.name?.kind === 'renamed' ? pending.name : undefined;
-    const shown = [
-        ...rows.map(entry => ({ entry, added: false })),
-        ...(rename ? [{ entry: { name, first_used: rename.oldFirstUsed }, added: true }] : []),
-    ];
+/** Name History, ending with the current name, with any suggestion shown in place. */
+export function NameHistoryTable({ rows, pending }: { rows: Array<NameEntry>; pending: Pending }) {
+    const change = pending.name;
+    const shown = rows.map((entry, i) => ({ entry, state: 'kept' as 'kept' | 'replaced' | 'new', i }));
+    if (change?.kind === 'fixed' && shown.length) {
+        shown[shown.length - 1].state = 'replaced';
+        shown.push({
+            entry: { name: change.to, first_used: rows.at(-1)?.first_used ?? null },
+            state: 'new',
+            i: rows.length,
+        });
+    }
+    if (change?.kind === 'renamed') {
+        shown.push({ entry: { name: change.to, first_used: change.from }, state: 'new', i: rows.length });
+    }
     if (shown.length === 0) return empty('No Name History yet.');
     return (
         <table className={table}>
@@ -465,10 +462,9 @@ export function NameHistoryTable({ rows, name, pending }: { rows: Array<NameEntr
                 </tr>
             </thead>
             <tbody>
-                {shown.map(({ entry, added }, i) => (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: entries have no IDs and a name can recur
-                    <tr key={i}>
-                        <td>{added ? <mark className={mark}>{entry.name}</mark> : entry.name}</td>
+                {shown.map(({ entry, state, i }) => (
+                    <tr key={i} className={cn(state === 'replaced' && 'text-muted-foreground line-through')}>
+                        <td>{state === 'new' ? <mark className={mark}>{entry.name}</mark> : entry.name}</td>
                         <td>
                             <PartialDate value={entry.first_used} />
                         </td>

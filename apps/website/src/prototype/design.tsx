@@ -72,7 +72,7 @@ export function DesignSwitcher() {
     }
     const button = 'rounded-full px-3 py-1 hover:bg-white/15';
     return (
-        <div className="fixed bottom-4 left-1/2 z-[100] flex -translate-x-1/2 items-center gap-1 rounded-full bg-neutral-950 px-1.5 py-1 font-mono text-xs text-white shadow-2xl ring-1 ring-white/20 [font-family:ui-monospace,monospace]">
+        <div className="fixed bottom-20 left-1/2 lg:bottom-4 z-[100] flex -translate-x-1/2 items-center gap-1 rounded-full bg-neutral-950 px-1.5 py-1 font-mono text-xs text-white shadow-2xl ring-1 ring-white/20 [font-family:ui-monospace,monospace]">
             <button type="button" className={button} onClick={() => go(-1)} aria-label="Previous design">
                 ←
             </button>
