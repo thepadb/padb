@@ -351,8 +351,7 @@ export function StatusRow({
                                     items={statusItems}
                                     name="status"
                                     placeholder="Choose a Status"
-                                    // Start from the current Status, as with the name
-                                    defaultValue={last?.status ?? null}
+                                    defaultValue={kind === 'fixed' ? last?.status : null}
                                 />
                             </div>
                             <DateInput
