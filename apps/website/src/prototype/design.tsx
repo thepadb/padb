@@ -7,6 +7,9 @@ export const DESIGNS = [
     { key: 'A', name: 'Wayfinding' },
     { key: 'B', name: 'Register' },
     { key: 'C', name: 'Midway' },
+    { key: 'D', name: 'Register II' },
+    { key: 'E', name: 'Chronicle' },
+    { key: 'F', name: 'Workbench' },
 ] as const;
 export type Design = (typeof DESIGNS)[number]['key'];
 export type Theme = 'light' | 'dark';

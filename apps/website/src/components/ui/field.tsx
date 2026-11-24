@@ -11,6 +11,10 @@ export const inputClasses = [
     'design-b:rounded-[3px] design-b:border design-b:bg-card design-b:px-3 design-b:text-sm design-b:focus-visible:border-primary design-b:focus-visible:ring-3 design-b:focus-visible:ring-primary/20',
     // C: a chunky ticket-booth field
     'design-c:h-12 design-c:rounded-xl design-c:border-2 design-c:bg-card design-c:px-4 design-c:focus-visible:ring-4 design-c:focus-visible:ring-secondary',
+    // E: a plain box with a heavy baseline
+    'design-e:rounded-none design-e:border design-e:border-b-2 design-e:bg-card design-e:px-3 design-e:focus-visible:border-primary',
+    // F: a dense tool field
+    'design-f:h-9 design-f:rounded-md design-f:border design-f:bg-card design-f:px-2.5 design-f:text-sm design-f:focus-visible:border-primary design-f:focus-visible:ring-2 design-f:focus-visible:ring-primary/25',
 ].join(' ');
 
 export function Field({ className, ...props }: React.ComponentProps<typeof BaseField.Root>) {
@@ -21,7 +25,7 @@ export function FieldLabel({ className, ...props }: React.ComponentProps<typeof 
     return (
         <BaseField.Label
             className={cn(
-                'text-sm font-semibold data-invalid:text-destructive design-b:font-medium design-c:text-base design-c:font-bold',
+                'text-sm font-semibold data-invalid:text-destructive design-b:font-medium design-c:text-base design-c:font-bold design-f:text-xs design-f:font-medium design-f:text-muted-foreground',
                 className,
             )}
             {...props}

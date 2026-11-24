@@ -26,6 +26,10 @@ const table = [
     'design-b:[&_tbody_tr]:border-0 design-b:[&_tbody_tr:nth-child(even)]:bg-muted design-b:[&_thead]:bg-secondary design-b:[&_th]:py-1.5 design-b:[&_th]:pl-3 design-b:[&_td]:pl-3 design-b:[&_th]:font-medium design-b:[&_th]:text-secondary-foreground',
     // C: big bold rows
     'design-c:text-base design-c:[&_tbody_tr]:border-t-2 design-c:[&_tbody_tr]:border-dashed design-c:[&_th]:font-bold design-c:[&_td]:py-2',
+    // E: dates lead, set wide
+    'design-e:[&_th]:font-semibold design-e:[&_th]:[font-stretch:112%] design-e:[&_thead]:border-b-2 design-e:[&_thead]:border-foreground',
+    // F: a dense grid
+    'design-f:text-[13px] design-f:[&_td]:py-1 design-f:[&_th]:text-xs design-f:[&_th]:font-medium',
 ].join(' ');
 
 function Empty({ children }: { children: string }) {
@@ -123,24 +127,29 @@ export const openedOf = (history: Array<StatusEntry>) =>
 export type SortKey = 'name' | 'country' | 'status' | 'opened';
 
 /** Country filter from ?country=; name filter, sort and "Load more" in memory. */
-export function useParksList() {
+export function useParksList(initial: { key: SortKey; descending: boolean } = { key: 'name', descending: false }) {
     const { country } = useSearch({ strict: false }) as { country?: string };
     const navigate = useNavigate();
     const [shown, setShown] = useState(PAGE_SIZE);
     const [query, setQuery] = useState('');
-    const [sort, setSort] = useState<{ key: SortKey; descending: boolean }>({ key: 'name', descending: false });
+    const [sort, setSort] = useState<{ key: SortKey; descending: boolean }>(initial);
     const needle = query.trim().toLocaleLowerCase('en-GB');
-    const value = (park: Park): string => {
+    const value = (park: Park): string | null => {
         if (sort.key === 'country') return countryName(park.country);
-        if (sort.key === 'status') return park.statusHistory.at(-1)?.status ?? '~';
+        if (sort.key === 'status') return park.statusHistory.at(-1)?.status ?? null;
         // Partial Dates compare as text only for sorting a prototype list
-        if (sort.key === 'opened') return openedOf(park.statusHistory) ?? '~';
+        if (sort.key === 'opened') return openedOf(park.statusHistory);
         return park.name;
     };
     const filtered = parks
         .filter(park => !country || park.country === country)
         .filter(park => !needle || park.name.toLocaleLowerCase('en-GB').includes(needle))
-        .sort((a, b) => value(a).localeCompare(value(b), 'en-GB') * (sort.descending ? -1 : 1));
+        .sort((a, b) => {
+            const [x, y] = [value(a), value(b)];
+            // Unknowns always last
+            if (x === null || y === null) return x === y ? 0 : x === null ? 1 : -1;
+            return x.localeCompare(y, 'en-GB') * (sort.descending ? -1 : 1);
+        });
     const counts = Object.entries(
         parks.reduce<Record<string, number>>((acc, park) => {
             acc[park.country] = (acc[park.country] ?? 0) + 1;

@@ -105,7 +105,7 @@ export function PreviewLink({
                     <PreviewCard.Popup
                         className={cn(
                             'w-72 origin-(--transform-origin) border bg-popover p-3 text-popover-foreground shadow-xl transition-[scale,opacity] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0',
-                            'rounded-sm design-b:rounded-[3px] design-b:border-t-4 design-b:border-t-primary design-c:rounded-2xl design-c:border-2 design-c:shadow-[0_6px_0_var(--foreground)]',
+                            'rounded-sm design-b:rounded-[3px] design-b:border-t-4 design-b:border-t-primary design-c:rounded-2xl design-c:border-2 design-c:shadow-[0_6px_0_var(--foreground)] design-e:rounded-none design-e:border-t-4 design-e:border-t-primary design-f:rounded-lg',
                         )}
                     >
                         <Content kind={kind} id={id} />

@@ -10,6 +10,8 @@ export const buttonVariants = cva(
         'rounded-sm',
         'design-b:rounded-[3px] design-b:font-medium',
         'design-c:rounded-full design-c:border-2 design-c:border-foreground design-c:font-display design-c:font-normal design-c:shadow-[0_4px_0_var(--foreground)] design-c:active:translate-y-1 design-c:active:shadow-none',
+        'design-e:rounded-none design-e:[font-stretch:112%]',
+        'design-f:h-8 design-f:rounded-md design-f:px-3 design-f:font-medium',
     ],
     {
         variants: {

@@ -7,13 +7,20 @@
 @import "@fontsource/libre-caslon-text/700.css";
 @import "@fontsource/bungee";
 @import "@fontsource-variable/figtree";
+@import "@fontsource-variable/literata";
+@import "@fontsource-variable/atkinson-hyperlegible-next";
+@import "@fontsource-variable/archivo/wdth.css";
+@import "@fontsource-variable/ibm-plex-sans";
 
 @source inline("border-st-{ok,pause,stop,none}");
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant design-a (&:where([data-design="A"], [data-design="A"] *));
-@custom-variant design-b (&:where([data-design="B"], [data-design="B"] *));
+/* D is B with its own colours and type, so it shares B's component styles */
+@custom-variant design-b (&:where([data-design="B"], [data-design="B"] *, [data-design="D"], [data-design="D"] *));
 @custom-variant design-c (&:where([data-design="C"], [data-design="C"] *));
+@custom-variant design-e (&:where([data-design="E"], [data-design="E"] *));
+@custom-variant design-f (&:where([data-design="F"], [data-design="F"] *));
 
 @theme inline {
     --color-background: var(--background);
@@ -178,6 +185,154 @@
     --input: #fff4d6;
     --ph-light: 0.45;
     --ph-ink: 0.9;
+}
+
+/* D, Register II: B's record, less bank. Parkland green, lake blue, white paper, a bookish serif. */
+[data-design="D"] {
+    --font-body: "Atkinson Hyperlegible Next Variable", system-ui, sans-serif;
+    --font-heading: "Literata Variable", Georgia, serif;
+    --background: #fcfdfc;
+    --foreground: #1e2522;
+    --card: #ffffff;
+    --primary: #2f6b47;
+    --primary-foreground: #ffffff;
+    --secondary: #e3efe6;
+    --secondary-foreground: #24533a;
+    --muted: #f0f4f1;
+    --muted-foreground: #55615b;
+    --accent: #3b7fb6;
+    --accent-foreground: #ffffff;
+    --destructive: #b8382a;
+    --border: #d8e1db;
+    --input: #b3c1b8;
+    --ring: #3b7fb6;
+    --st-ok: #2f8a55;
+    --st-pause: #c98a12;
+    --st-stop: #c2412f;
+    --st-none: #84908a;
+    --ph-chroma: 0.05;
+    --ph-light: 0.88;
+    --ph-ink: 0.38;
+}
+[data-design="D"].dark {
+    --background: #121c17;
+    --foreground: #e7eee9;
+    --card: #18251f;
+    --primary: #8fd1a8;
+    --primary-foreground: #121c17;
+    --secondary: #20392c;
+    --secondary-foreground: #e7eee9;
+    --muted: #1a2a22;
+    --muted-foreground: #9db0a5;
+    --accent: #7db7e6;
+    --accent-foreground: #121c17;
+    --border: #2b3f34;
+    --input: #46604f;
+    --ring: #7db7e6;
+    --st-ok: #6fcf94;
+    --st-pause: #e8b34a;
+    --st-stop: #ec7b69;
+    --ph-light: 0.32;
+    --ph-ink: 0.78;
+}
+
+/* E, Chronicle: time is the layout. Archivo's width axis, cool paper, ultramarine. */
+[data-design="E"] {
+    --font-body: "Archivo Variable", system-ui, sans-serif;
+    --font-heading: "Archivo Variable", system-ui, sans-serif;
+    --background: #f5f6f8;
+    --foreground: #1a1f2b;
+    --card: #ffffff;
+    --primary: #2f45c6;
+    --primary-foreground: #ffffff;
+    --secondary: #e4e8f7;
+    --secondary-foreground: #1f2f8f;
+    --muted: #eceef2;
+    --muted-foreground: #596071;
+    --accent: #2f45c6;
+    --accent-foreground: #ffffff;
+    --destructive: #c93636;
+    --border: #d7dbe3;
+    --input: #b7bdca;
+    --ring: #2f45c6;
+    --st-ok: #1f9d6a;
+    --st-pause: #e0a100;
+    --st-stop: #d64545;
+    --st-none: #a0a7b4;
+    --ph-chroma: 0.06;
+    --ph-light: 0.9;
+    --ph-ink: 0.4;
+}
+[data-design="E"].dark {
+    --background: #151a26;
+    --foreground: #eef0f5;
+    --card: #1c2232;
+    --primary: #95a3ff;
+    --primary-foreground: #151a26;
+    --secondary: #252e4d;
+    --secondary-foreground: #dfe4ff;
+    --muted: #20273a;
+    --muted-foreground: #a4abbd;
+    --accent: #95a3ff;
+    --border: #2e364b;
+    --input: #48516a;
+    --ring: #95a3ff;
+    --st-ok: #45c98f;
+    --st-pause: #f2bd3a;
+    --st-stop: #f07070;
+    --st-none: #6d768a;
+    --ph-light: 0.3;
+    --ph-ink: 0.75;
+}
+
+/* F, Workbench: a tool for browsing and editing. Plex Sans, grey panes, white sheets, highlighter selection. */
+[data-design="F"] {
+    --font-body: "IBM Plex Sans Variable", system-ui, sans-serif;
+    --font-heading: "IBM Plex Sans Variable", system-ui, sans-serif;
+    --background: #eceef2;
+    --foreground: #1d2330;
+    --card: #ffffff;
+    --primary: #0b6e8a;
+    --primary-foreground: #ffffff;
+    --secondary: #dcedf2;
+    --secondary-foreground: #0a5266;
+    --muted: #f3f4f6;
+    --muted-foreground: #5b6474;
+    --accent: #ffe680;
+    --accent-foreground: #1d2330;
+    --destructive: #c42f2f;
+    --border: #d6dae1;
+    --input: #b9c0cb;
+    --ring: #0b6e8a;
+    --st-ok: #1a8f5c;
+    --st-pause: #c98500;
+    --st-stop: #cf3b3b;
+    --st-none: #8d95a3;
+    --ph-chroma: 0.03;
+    --ph-light: 0.9;
+    --ph-ink: 0.45;
+}
+[data-design="F"].dark {
+    --background: #15181e;
+    --foreground: #e4e7ec;
+    --card: #1d2129;
+    --primary: #5cc3dc;
+    --primary-foreground: #12161c;
+    --secondary: #1d3640;
+    --secondary-foreground: #bfe6f0;
+    --muted: #232831;
+    --muted-foreground: #9aa3b2;
+    --accent: #5a4d12;
+    --accent-foreground: #fff3c2;
+    --border: #2e343f;
+    --input: #4a5260;
+    --ring: #5cc3dc;
+    --st-ok: #4cc48a;
+    --st-pause: #e6a93a;
+    --st-stop: #ef6b6b;
+    --st-none: #737c8b;
+    --ph-light: 0.3;
+    --ph-ink: 0.72;
 }
 
 @layer base {
