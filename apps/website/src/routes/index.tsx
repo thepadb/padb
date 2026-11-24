@@ -29,6 +29,11 @@ function HomePage() {
                     </Link>
                 </li>
                 <li>
+                    <Link className={link} to="/dates">
+                        Partial Date pickers
+                    </Link>
+                </li>
+                <li>
                     Resorts:{' '}
                     {resorts.map(r => (
                         <Link key={r.id} className={`${link} mr-3`} to="/resorts/$resort" params={{ resort: r.id }}>

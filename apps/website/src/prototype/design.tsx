@@ -35,7 +35,9 @@ const isTyping = (target: EventTarget | null) =>
     target instanceof HTMLElement
     && (target.isContentEditable
         || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
-        || target.role === 'combobox');
+        || target.role === 'combobox'
+        // Arrow keys belong to pickers and dialogs while one is open
+        || Boolean(target.closest('[role=dialog]')));
 
 /** ←/→ cycle designs, `d` toggles dark mode; a pill shows both. Dev only. */
 export function DesignSwitcher() {

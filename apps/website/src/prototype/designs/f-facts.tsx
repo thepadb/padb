@@ -244,7 +244,8 @@ export function NameRow({
                             <span className={label}>{kind === 'renamed' ? 'New name' : 'Correct name'}</span>
                             <input
                                 name="value"
-                                defaultValue={kind === 'fixed' ? name : ''}
+                                // Start from the current name: a new name is often a small change to it
+                                defaultValue={name}
                                 key={kind}
                                 aria-invalid={Boolean(errors.value)}
                                 // biome-ignore lint/a11y/noAutofocus: the user just asked to edit this field
@@ -350,7 +351,8 @@ export function StatusRow({
                                     items={statusItems}
                                     name="status"
                                     placeholder="Choose a Status"
-                                    defaultValue={kind === 'fixed' ? last?.status : null}
+                                    // Start from the current Status, as with the name
+                                    defaultValue={last?.status ?? null}
                                 />
                             </div>
                             <DateInput

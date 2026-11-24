@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DatesRouteImport } from './routes/dates'
 import { Route as ParksIndexRouteImport } from './routes/parks.index'
 import { Route as ParksParkRouteImport } from './routes/parks.$park'
 import { Route as ParksNewRouteImport } from './routes/parks.new'
@@ -19,6 +20,11 @@ import { Route as RidesRideRouteImport } from './routes/rides.$ride'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DatesRoute = DatesRouteImport.update({
+  id: '/dates',
+  path: '/dates',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ParksIndexRoute = ParksIndexRouteImport.update({
@@ -49,6 +55,7 @@ const RidesRideRoute = RidesRideRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dates': typeof DatesRoute
   '/parks/$park': typeof ParksParkRoute
   '/parks/new': typeof ParksNewRoute
   '/resorts/$resort': typeof ResortsResortRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dates': typeof DatesRoute
   '/parks/$park': typeof ParksParkRoute
   '/parks/new': typeof ParksNewRoute
   '/resorts/$resort': typeof ResortsResortRoute
@@ -66,6 +74,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dates': typeof DatesRoute
   '/parks/$park': typeof ParksParkRoute
   '/parks/new': typeof ParksNewRoute
   '/resorts/$resort': typeof ResortsResortRoute
@@ -76,6 +85,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/dates'
     | '/parks/$park'
     | '/parks/new'
     | '/resorts/$resort'
@@ -84,6 +94,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/dates'
     | '/parks/$park'
     | '/parks/new'
     | '/resorts/$resort'
@@ -92,6 +103,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/dates'
     | '/parks/$park'
     | '/parks/new'
     | '/resorts/$resort'
@@ -101,6 +113,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DatesRoute: typeof DatesRoute
   ParksParkRoute: typeof ParksParkRoute
   ParksNewRoute: typeof ParksNewRoute
   ResortsResortRoute: typeof ResortsResortRoute
@@ -115,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dates': {
+      id: '/dates'
+      path: '/dates'
+      fullPath: '/dates'
+      preLoaderRoute: typeof DatesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/parks/': {
@@ -157,6 +177,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DatesRoute: DatesRoute,
   ParksParkRoute: ParksParkRoute,
   ParksNewRoute: ParksNewRoute,
   ResortsResortRoute: ResortsResortRoute,
