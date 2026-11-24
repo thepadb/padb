@@ -151,6 +151,7 @@ export const parks: Array<Park> = [
         name: 'Sakura Hills Yūenchi',
         country: 'JP',
         operator: 'Sakura Hills Co., Ltd.',
+        resort: 'sakura',
         areas: ['Hanami Gate', 'Kids Town', 'Sky Garden'],
         statusHistory: [op('1965-07-01')],
         nameHistory: [{ name: 'Sakura Hills Pleasure Ground', first_used: '1965-07-01' }],
@@ -223,6 +224,17 @@ export const parks: Array<Park> = [
         statusHistory: [op('1988'), { status: 'closed', began: '2015' }],
         nameHistory: [{ name: 'Thunder Ridge Family Fun Centre', first_used: '1988' }],
     },
+    {
+        // A second Park so the Sakura Resort groups several
+        id: 'sakura-splash',
+        name: 'Sakura Splash',
+        country: 'JP',
+        operator: 'Sakura Hills Co., Ltd.',
+        resort: 'sakura',
+        areas: [],
+        statusHistory: [{ status: 'under_construction', began: '2023' }, op('2025-07-19')],
+        nameHistory: [],
+    },
 ];
 
 export const rides: Array<Ride> = [
@@ -290,6 +302,16 @@ export const rides: Array<Ride> = [
         statusHistory: [op('1971'), { status: 'closed', began: '1999-10' }, op('2006')],
         nameHistory: [],
     },
+    {
+        id: 'sky-garden-wheel',
+        name: 'Sky Garden Wheel',
+        park: 'sakura-hills',
+        area: 'Sky Garden',
+        manufacturer: 'Unknown',
+        category: 'Flat',
+        statusHistory: [op('1972'), { status: 'sbno', began: '2022-06' }],
+        nameHistory: [{ name: 'Hanami Wheel', first_used: '1972' }],
+    },
 ];
 
 export const resorts: Array<Resort> = [
@@ -313,6 +335,18 @@ export const resorts: Array<Resort> = [
         operator: 'Silbersee Freizeit GmbH & Co. KG',
         parks: ['koeniglicher-freizeitpark'],
         hotels: [{ name: 'Hotel Silbersee', opened: '2001' }],
+        nameHistory: [],
+    },
+    {
+        id: 'sakura',
+        name: 'Sakura Hills Resort',
+        country: 'JP',
+        operator: 'Sakura Hills Co., Ltd.',
+        parks: ['sakura-hills', 'sakura-splash'],
+        hotels: [
+            { name: 'Hotel Sakura Hills', opened: '1972' },
+            { name: 'Sky Garden Inn', opened: '2019-03' },
+        ],
         nameHistory: [],
     },
 ];

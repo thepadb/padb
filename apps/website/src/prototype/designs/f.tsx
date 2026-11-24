@@ -1,9 +1,9 @@
 // PROTOTYPE (issue #41): design F, "Workbench". A tool for people who browse and edit: a tree of
-// Countries, Parks and Rides always to hand, one sheet of detail beside it, every fact editable in place.
+// Countries, Destinations, Parks and Rides always to hand, one sheet of detail beside it, every fact
+// editable in place. The browser is in f-browse.tsx, the editable facts in f-facts.tsx.
 import { Link, useSearch } from '@tanstack/react-router';
-import { ChevronRightIcon, PencilIcon, XIcon } from 'lucide-react';
+import { ChevronRightIcon, XIcon } from 'lucide-react';
 import type * as React from 'react';
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { inputClasses } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
@@ -15,7 +15,6 @@ import {
     findResort,
     type NameEntry,
     type Park,
-    parks as allParks,
     type Resort,
     type Ride,
     ridesIn,
@@ -24,7 +23,9 @@ import {
 import { Placeholder } from '../placeholder';
 import { PreviewLink } from '../preview-link';
 import { SampleForm, useSampleForm } from '../sample-form';
-import { NameTable, openedOf, PartialDate, StatusDot, StatusTable, useParksList } from '../shared';
+import { Browser, type Current } from './f-browse';
+import { type Fact, FactRow, NameHistoryTable, NameRow, StatusHistoryTable, StatusRow, usePending } from './f-facts';
+import { openedOf, PartialDate, StatusDot, useParksList } from '../shared';
 import { currentStatus, statusLine } from '../status-line';
 
 const link = 'text-primary hover:underline';
@@ -49,137 +50,18 @@ export function Header() {
     );
 }
 
-type Current = { country?: string; park?: string; ride?: string };
-
-const byCountry = Object.entries(
-    allParks.reduce<Record<string, Array<Park>>>((acc, park) => {
-        acc[park.country] = [...(acc[park.country] ?? []), park];
-        return acc;
-    }, {}),
-)
-    .map(([code, parks]) => ({ code, name: countryName(code), parks }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'en-GB'));
-
-const row =
-    'flex min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 py-1 text-sm hover:bg-muted [&.active]:bg-accent [&.active]:text-accent-foreground';
-
-/** Countries, then Parks, then the open Park's Rides. Countries filter the Parks list. */
-function Tree({ current }: { current: Current }) {
-    const [query, setQuery] = useState('');
-    const [open, setOpen] = useState(() => new Set(current.country ? [current.country] : []));
-    const needle = query.trim().toLocaleLowerCase('en-GB');
-    const toggle = (code: string) =>
-        setOpen(prev => {
-            const next = new Set(prev);
-            next.has(code) ? next.delete(code) : next.add(code);
-            return next;
-        });
-    return (
-        <nav aria-label="Browse" className="p-3">
-            <input
-                type="search"
-                value={query}
-                onChange={event => setQuery(event.target.value)}
-                placeholder="Filter Parks"
-                aria-label="Filter Parks by name"
-                className={cn(inputClasses, 'mb-3')}
-            />
-            <ul className="space-y-px">
-                {byCountry.map(country => {
-                    const parks = country.parks.filter(
-                        park => !needle || park.name.toLocaleLowerCase('en-GB').includes(needle),
-                    );
-                    if (needle && parks.length === 0) return null;
-                    const expanded = Boolean(needle) || open.has(country.code);
-                    return (
-                        <li key={country.code}>
-                            <div className="flex items-center">
-                                <button
-                                    type="button"
-                                    onClick={() => toggle(country.code)}
-                                    aria-expanded={expanded}
-                                    aria-label={`${expanded ? 'Collapse' : 'Expand'} ${country.name}`}
-                                    className="grid size-6 shrink-0 place-items-center rounded text-muted-foreground hover:bg-muted"
-                                >
-                                    <ChevronRightIcon
-                                        className={cn('size-3.5 transition-transform', expanded && 'rotate-90')}
-                                    />
-                                </button>
-                                <Link
-                                    to="/parks"
-                                    search={{ country: country.code }}
-                                    className={cn(row, current.country === country.code && !current.park && 'active')}
-                                    activeOptions={{ exact: true, includeSearch: false }}
-                                    activeProps={{}}
-                                >
-                                    <span className="truncate">{country.name}</span>
-                                    <span className="ml-auto text-xs text-muted-foreground tabular">
-                                        {country.parks.length}
-                                    </span>
-                                </Link>
-                            </div>
-                            {expanded && (
-                                <ul className="ml-3 border-l pl-2">
-                                    {parks.map(park => (
-                                        <li key={park.id}>
-                                            <Link
-                                                to="/parks/$park"
-                                                params={{ park: park.id }}
-                                                className={cn(
-                                                    row,
-                                                    current.park === park.id && !current.ride && 'active',
-                                                )}
-                                                activeProps={{}}
-                                            >
-                                                <StatusDot
-                                                    status={currentStatus(park.statusHistory)}
-                                                    className="size-2"
-                                                />
-                                                <span className="truncate">{park.name}</span>
-                                            </Link>
-                                            {current.park === park.id && ridesIn(park.id).length > 0 && (
-                                                <ul className="ml-3 border-l pl-2">
-                                                    {ridesIn(park.id).map(ride => (
-                                                        <li key={ride.id}>
-                                                            <Link
-                                                                to="/rides/$ride"
-                                                                params={{ ride: ride.id }}
-                                                                className={cn(
-                                                                    row,
-                                                                    current.ride === ride.id && 'active',
-                                                                )}
-                                                                activeProps={{}}
-                                                            >
-                                                                <span className="truncate">{ride.name}</span>
-                                                            </Link>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            )}
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </li>
-                    );
-                })}
-            </ul>
-        </nav>
-    );
-}
-
 function Shell({ current, children }: { current: Current; children: React.ReactNode }) {
     return (
         <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
             <aside className="hidden border-r lg:block">
                 <div className="sticky top-0 max-h-dvh overflow-y-auto">
-                    <Tree current={current} />
+                    <Browser current={current} />
                 </div>
             </aside>
             <div className="min-w-0 p-2 sm:p-4">
                 <div className="mb-2 lg:hidden">
-                    <Sheet title="Browse" trigger={<Button variant="outline">Browse Parks</Button>}>
-                        <Tree current={current} />
+                    <Sheet title="Browse" trigger={<Button variant="outline">Browse and search</Button>}>
+                        <Browser current={current} />
                     </Sheet>
                 </div>
                 <main className="rounded-lg border bg-card px-4 py-5 sm:px-8 sm:py-7">{children}</main>
@@ -216,88 +98,21 @@ function Head({ name, line, crumbs }: { name: string; line?: string | null; crum
     );
 }
 
-type Fact = { label: string; value: React.ReactNode; raw?: string };
-
-/** A fact that can be edited where it sits. Nothing is saved: suggestions go to a Moderator. */
-function FactRow({ fact }: { fact: Fact }) {
-    const [editing, setEditing] = useState(false);
-    const [suggested, setSuggested] = useState<string | null>(null);
-    const editable = fact.raw !== undefined;
-    return (
-        <div className="group grid grid-cols-[8rem_minmax(0,1fr)_auto] items-start gap-x-3 border-b py-2 last:border-0 sm:grid-cols-[10rem_minmax(0,1fr)_auto]">
-            <dt className="pt-px text-sm text-muted-foreground">{fact.label}</dt>
-            {editing ? (
-                <dd className="col-span-2">
-                    <form
-                        className="flex flex-wrap gap-2"
-                        onSubmit={event => {
-                            event.preventDefault();
-                            const value = new FormData(event.currentTarget).get('value');
-                            setSuggested(String(value));
-                            setEditing(false);
-                        }}
-                        onKeyDown={event => event.key === 'Escape' && setEditing(false)}
-                    >
-                        <input
-                            name="value"
-                            defaultValue={suggested ?? fact.raw}
-                            aria-label={fact.label}
-                            // biome-ignore lint/a11y/noAutofocus: the user just asked to edit this field
-                            autoFocus
-                            className={cn(inputClasses, 'min-w-0 flex-1 basis-48')}
-                        />
-                        <Button type="submit" size="sm">
-                            Suggest edit
-                        </Button>
-                        <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>
-                            Cancel
-                        </Button>
-                    </form>
-                </dd>
-            ) : (
-                <>
-                    <dd className="min-w-0 text-sm break-words">
-                        {suggested === null ? (
-                            fact.value
-                        ) : (
-                            <>
-                                <span className="text-muted-foreground line-through">{fact.raw}</span>{' '}
-                                <mark className="rounded-sm bg-accent px-1 text-accent-foreground">{suggested}</mark>
-                                <span className="block text-xs text-muted-foreground">
-                                    Suggested. A Moderator will review it.
-                                </span>
-                            </>
-                        )}
-                    </dd>
-                    {editable && (
-                        <button
-                            type="button"
-                            onClick={() => setEditing(true)}
-                            aria-label={`Edit ${fact.label}`}
-                            className="grid size-6 place-items-center rounded text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring max-lg:opacity-100"
-                        >
-                            <PencilIcon className="size-3.5" />
-                        </button>
-                    )}
-                </>
-            )}
-        </div>
-    );
-}
-
 function Section({
+    id,
     title,
     count,
     action,
     children,
 }: {
+    id?: string;
     title: string;
     count?: number;
     action?: React.ReactNode;
     children: React.ReactNode;
 }) {
     return (
-        <section className="border-t pt-4 pb-8">
+        <section id={id} className="scroll-mt-4 border-t pt-4 pb-8">
             <div className="mb-3 flex items-center justify-between gap-4">
                 <h2 className={h2}>
                     {title}
@@ -310,12 +125,18 @@ function Section({
     );
 }
 
-function Detail({ name, facts, children }: { name: string; facts: Array<Fact>; children: React.ReactNode }) {
+type Record = { name: string; status?: Array<StatusEntry>; names: Array<NameEntry> } & ReturnType<typeof usePending>;
+
+function Detail({ record, facts, children }: { record: Record; facts: Array<Fact>; children: React.ReactNode }) {
     return (
         <div className="grid gap-x-10 xl:grid-cols-[minmax(0,1fr)_15rem]">
             <div className="min-w-0">
                 <Section title="Details">
                     <dl>
+                        <NameRow name={record.name} pending={record.pending} suggest={record.suggest} />
+                        {record.status && (
+                            <StatusRow history={record.status} pending={record.pending} suggest={record.suggest} />
+                        )}
                         {facts.map(fact => (
                             <FactRow key={fact.label} fact={fact} />
                         ))}
@@ -324,7 +145,10 @@ function Detail({ name, facts, children }: { name: string; facts: Array<Fact>; c
                 {children}
             </div>
             <aside className="order-first mb-6 xl:order-none">
-                <Placeholder name={name} className="aspect-[3/1] w-full rounded-md sm:aspect-[16/9] xl:aspect-square" />
+                <Placeholder
+                    name={record.name}
+                    className="aspect-[3/1] w-full rounded-md sm:aspect-[16/9] xl:aspect-square"
+                />
                 <Button variant="ghost" size="sm" className="mt-1 w-full">
                     Add a photo
                 </Button>
@@ -333,7 +157,7 @@ function Detail({ name, facts, children }: { name: string; facts: Array<Fact>; c
     );
 }
 
-function Histories({ status, names }: { status: Array<StatusEntry>; names: Array<NameEntry> }) {
+function Histories({ record }: { record: Record }) {
     const add = (label: string) => (
         <Button variant="outline" size="sm">
             {label}
@@ -341,11 +165,13 @@ function Histories({ status, names }: { status: Array<StatusEntry>; names: Array
     );
     return (
         <div className="grid gap-x-8 md:grid-cols-2">
-            <Section title="Status History" count={status.length} action={add('Add Status')}>
-                <StatusTable rows={status} />
-            </Section>
-            <Section title="Name History" count={names.length} action={add('Add name')}>
-                <NameTable rows={names} />
+            {record.status && (
+                <Section title="Status History" count={record.status.length} action={add('Add Status')}>
+                    <StatusHistoryTable rows={record.status} pending={record.pending} />
+                </Section>
+            )}
+            <Section title="Name History" count={record.names.length} action={add('Add name')}>
+                <NameHistoryTable rows={record.names} name={record.name} pending={record.pending} />
             </Section>
         </div>
     );
@@ -367,8 +193,9 @@ const StatusCell = ({ history }: { history: Array<StatusEntry> }) => {
 export function ParkPage({ park }: { park: Park }) {
     const resort = park.resort ? findResort(park.resort) : undefined;
     const rides = ridesIn(park.id);
+    const record = { name: park.name, status: park.statusHistory, names: park.nameHistory, ...usePending() };
     return (
-        <Shell current={{ country: park.country, park: park.id }}>
+        <Shell current={{ country: park.country, resort: park.resort, park: park.id }}>
             <Head
                 name={park.name}
                 line={statusLine(park.statusHistory)}
@@ -387,9 +214,8 @@ export function ParkPage({ park }: { park: Park }) {
                 ].filter(Boolean)}
             />
             <Detail
-                name={park.name}
+                record={record}
                 facts={[
-                    { label: 'Name', value: park.name, raw: park.name },
                     { label: 'Country', value: countryName(park.country), raw: countryName(park.country) },
                     { label: 'Operator', value: park.operator, raw: park.operator },
                     {
@@ -479,7 +305,7 @@ export function ParkPage({ park }: { park: Park }) {
                         <p className="text-sm text-muted-foreground">No Areas yet.</p>
                     )}
                 </Section>
-                <Histories status={park.statusHistory} names={park.nameHistory} />
+                <Histories record={record} />
             </Detail>
         </Shell>
     );
@@ -560,6 +386,7 @@ export function ParksPage() {
 
 export function RidePage({ ride }: { ride: Ride }) {
     const park = findPark(ride.park);
+    const record = { name: ride.name, status: ride.statusHistory, names: ride.nameHistory, ...usePending() };
     return (
         <Shell current={{ country: park?.country, park: park?.id, ride: ride.id }}>
             <Head
@@ -577,9 +404,8 @@ export function RidePage({ ride }: { ride: Ride }) {
                 ].filter(Boolean)}
             />
             <Detail
-                name={ride.name}
+                record={record}
                 facts={[
-                    { label: 'Name', value: ride.name, raw: ride.name },
                     {
                         label: 'Park',
                         value: park ? (
@@ -606,15 +432,16 @@ export function RidePage({ ride }: { ride: Ride }) {
                     },
                 ]}
             >
-                <Histories status={ride.statusHistory} names={ride.nameHistory} />
+                <Histories record={record} />
             </Detail>
         </Shell>
     );
 }
 
 export function ResortPage({ resort }: { resort: Resort }) {
+    const record = { name: resort.name, names: resort.nameHistory, ...usePending() };
     return (
-        <Shell current={{ country: resort.country }}>
+        <Shell current={{ country: resort.country, resort: resort.id }}>
             <Head
                 name={resort.name}
                 crumbs={[
@@ -625,9 +452,8 @@ export function ResortPage({ resort }: { resort: Resort }) {
                 ]}
             />
             <Detail
-                name={resort.name}
+                record={record}
                 facts={[
-                    { label: 'Name', value: resort.name, raw: resort.name },
                     { label: 'Country', value: countryName(resort.country), raw: countryName(resort.country) },
                     { label: 'Operator', value: resort.operator, raw: resort.operator },
                 ]}
@@ -662,7 +488,7 @@ export function ResortPage({ resort }: { resort: Resort }) {
                         </tbody>
                     </table>
                 </Section>
-                <Section title="Hotels" count={resort.hotels.length}>
+                <Section id="hotels" title="Hotels" count={resort.hotels.length}>
                     <table className={grid}>
                         <thead>
                             <tr>
@@ -682,9 +508,7 @@ export function ResortPage({ resort }: { resort: Resort }) {
                         </tbody>
                     </table>
                 </Section>
-                <Section title="Name History" count={resort.nameHistory.length}>
-                    <NameTable rows={resort.nameHistory} className="max-w-md" />
-                </Section>
+                <Histories record={record} />
             </Detail>
         </Shell>
     );

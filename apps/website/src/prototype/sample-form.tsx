@@ -18,8 +18,8 @@ const STATUSES = [
     'closed',
     'demolished',
 ] as const;
-const statusItems = STATUSES.map(value => ({ value, label: statusName(value) }));
-const PARTIAL_DATE = /^\d{4}(-\d{2}(-\d{2})?)?$/;
+export const statusItems = STATUSES.map(value => ({ value, label: statusName(value) }));
+export const PARTIAL_DATE = /^\d{4}(-\d{2}(-\d{2})?)?$/;
 
 type Errors = Record<string, string>;
 
