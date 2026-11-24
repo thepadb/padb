@@ -1,200 +1,265 @@
-// PROTOTYPE (issue #41): design C, "Funfair". Strong palette, rounded shapes, expressive display font.
-import { Link } from '@tanstack/react-router';
-import { SlidersHorizontalIcon, SparklesIcon } from 'lucide-react';
+// PROTOTYPE (issue #41): design C, "Midway". Playful: the fairground's own objects. A marquee sign for
+// every hero, Parks as admission tickets, Areas as signposts, ride height on a measuring stick.
+import { Link, useNavigate } from '@tanstack/react-router';
+import { ShuffleIcon } from 'lucide-react';
 import type * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet } from '@/components/ui/sheet';
 import { statusName } from '@/lib/status';
 import { cn } from '@/lib/utils';
-import { countryName, findPark, findResort, type Park, type Resort, type Ride, ridesIn } from '../data';
+import { countryName, findPark, findResort, type Park, parks, type Resort, type Ride, ridesIn } from '../data';
 import { Placeholder } from '../placeholder';
 import { PreviewLink } from '../preview-link';
 import { SampleForm, useSampleForm } from '../sample-form';
-import { NameTable, PartialDate, type ParksList, StatusTable, useParksList } from '../shared';
+import { NameTable, openedOf, PartialDate, type ParksList, StatusDot, StatusTable, useParksList } from '../shared';
 import { currentStatus, statusLine } from '../status-line';
 
-const wrap = 'mx-auto w-full max-w-7xl px-4 sm:px-6';
-const chunky = 'rounded-3xl border-2 border-foreground bg-card shadow-[5px_5px_0_var(--foreground)]';
+const wrap = 'mx-auto w-full max-w-6xl px-4 sm:px-6';
 const flag = (code: string) => String.fromCodePoint(...[...code].map(c => 0x1f1a5 + c.charCodeAt(0)));
-const TILE_COLOURS = [
-    'bg-secondary text-secondary-foreground',
-    'bg-accent text-accent-foreground',
+const board = 'rounded-3xl border-[3px] border-foreground bg-card';
+const PLATES = [
     'bg-primary text-primary-foreground',
+    'bg-accent text-accent-foreground',
+    'bg-secondary text-secondary-foreground',
 ];
+
+function SurpriseMe() {
+    const navigate = useNavigate();
+    return (
+        <Button
+            size="sm"
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
+            onClick={() =>
+                navigate({ to: '/parks/$park', params: { park: parks[Math.floor(Math.random() * parks.length)].id } })
+            }
+        >
+            <ShuffleIcon className="size-4" /> Surprise me
+        </Button>
+    );
+}
 
 export function Header() {
     return (
-        <header className="bg-header text-header-foreground">
-            <div className={cn(wrap, 'flex h-16 items-center gap-4')}>
-                <Link to="/" className="flex items-center gap-1.5 font-display text-2xl font-bold">
-                    <span className="grid size-9 place-items-center rounded-full bg-secondary text-secondary-foreground">
-                        <SparklesIcon className="size-5" />
-                    </span>
-                    padb
-                </Link>
-                <nav className="ml-auto flex gap-1 font-display text-sm font-medium [&_a]:rounded-full [&_a]:px-3 [&_a]:py-1.5 [&_a:hover]:bg-white/10 [&_a.active]:bg-primary [&_a.active]:text-primary-foreground">
-                    <Link to="/parks">Parks</Link>
-                    <Link to="/resorts/$resort" params={{ resort: 'lakeside' }}>
-                        Resorts
+        <header>
+            <div className="bg-[#1b2a4a] text-[#fff4d6] dark:bg-[#0a1226]">
+                <div className={cn(wrap, 'flex h-16 items-center gap-5')}>
+                    <Link to="/" className="font-display text-2xl">
+                        PADB
                     </Link>
-                    <Link to="/parks/new">Add one!</Link>
-                </nav>
+                    <nav className="flex gap-4 font-semibold [&_a.active]:text-secondary [&_a:hover]:text-secondary">
+                        <Link to="/parks">Parks</Link>
+                        <Link to="/resorts/$resort" params={{ resort: 'lakeside' }}>
+                            Resorts
+                        </Link>
+                        <Link to="/parks/new" className="hidden sm:inline">
+                            Add a Park
+                        </Link>
+                    </nav>
+                    <div className="ml-auto">
+                        <SurpriseMe />
+                    </div>
+                </div>
             </div>
-            <svg
-                aria-hidden="true"
-                viewBox="0 0 1200 16"
-                preserveAspectRatio="none"
-                className="block h-3 w-full translate-y-px text-background"
-            >
-                <path
-                    fill="currentColor"
-                    d="M0 16V8c50 0 50-8 100-8s50 8 100 8 50-8 100-8 50 8 100 8 50-8 100-8 50 8 100 8 50-8 100-8 50 8 100 8 50-8 100-8 50 8 100 8 50-8 100-8 50 8 100 8 50-8 100-8 50 8 100 8v8z"
-                />
-            </svg>
+            <div className="awning" aria-hidden="true" />
         </header>
     );
 }
 
-function StatusSticker({ text }: { text: string | null }) {
+/** A ring of bulbs around the sign; they chase once on load (reduced motion: they just glow). */
+function Bulbs() {
+    const along = (count: number) => Array.from({ length: count }, (_, i) => (i / (count - 1)) * 100);
+    const spots = [
+        ...along(16).map(x => ({ left: x, top: 0 })),
+        ...along(16).map(x => ({ left: 100 - x, top: 100 })),
+        ...along(6)
+            .slice(1, -1)
+            .map(y => ({ left: 100, top: y })),
+        ...along(6)
+            .slice(1, -1)
+            .map(y => ({ left: 0, top: 100 - y })),
+    ];
+    return (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-3">
+            {spots.map((spot, i) => (
+                <span
+                    // biome-ignore lint/suspicious/noArrayIndexKey: fixed decoration
+                    key={i}
+                    className="marquee-bulb absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-secondary shadow-[0_0_10px_2px_var(--secondary)]"
+                    style={{ left: `${spot.left}%`, top: `${spot.top}%`, ['--i' as string]: i }}
+                />
+            ))}
+        </div>
+    );
+}
+
+function Marquee({ name, kicker, children }: { name: string; kicker: React.ReactNode; children?: React.ReactNode }) {
+    return (
+        <section className="relative mt-8 rounded-[2rem] border-4 border-secondary bg-[#1b2a4a] p-8 text-[#fff4d6] sm:p-12 dark:bg-card">
+            <Bulbs />
+            <div className="relative grid items-center gap-8 md:grid-cols-[minmax(0,1fr)_15rem]">
+                <div className="min-w-0">
+                    <p className="text-lg font-semibold">{kicker}</p>
+                    <h1 className="mt-2 font-display text-3xl leading-[1.05] text-secondary break-words hyphens-auto sm:text-5xl">
+                        {name}
+                    </h1>
+                    {children}
+                </div>
+                <Placeholder
+                    name={name}
+                    className="aspect-square w-40 rounded-2xl border-4 border-secondary md:w-full"
+                />
+            </div>
+        </section>
+    );
+}
+
+function Pill({ text, status }: { text: string | null; status?: Park['statusHistory'][number]['status'] }) {
     return text ? (
-        <p className="inline-flex -rotate-2 rounded-full border-2 border-foreground bg-primary px-4 py-1.5 font-display font-semibold text-primary-foreground shadow-[3px_3px_0_var(--foreground)]">
+        <p className="mt-5 inline-flex items-center gap-2.5 rounded-full bg-[#fff4d6] px-4 py-2 font-bold text-[#1b2a4a]">
+            <StatusDot status={status} className="size-3" />
             {text}
         </p>
     ) : null;
 }
 
-function Hero({ kind, name, children }: { kind: string; name: string; children?: React.ReactNode }) {
+/** Facts on a ticket: perforated between the heading and the rows. */
+function FactTicket({ title, rows }: { title: string; rows: Array<[string, React.ReactNode]> }) {
     return (
-        <section
-            className={cn(
-                chunky,
-                'grid items-center gap-6 bg-hero p-5 text-hero-foreground md:grid-cols-[16rem_1fr] md:p-8',
-            )}
-        >
-            <Placeholder
-                name={name}
-                className="aspect-square w-40 rotate-[-3deg] rounded-[2rem] border-2 border-foreground md:w-full"
-            />
-            <div className="min-w-0">
-                <p className="font-display text-sm font-semibold tracking-wide uppercase opacity-70">{kind}</p>
-                <h1 className="mt-1 mb-4 font-display text-4xl leading-[1.05] font-bold text-balance break-words hyphens-auto md:text-6xl">
-                    {name}
-                </h1>
-                {children}
+        <aside className={cn(board, 'relative h-fit lg:sticky lg:top-6')}>
+            <h2 className="px-5 pt-4 pb-3 font-display text-lg">{title}</h2>
+            <div className="relative border-t-[3px] border-dashed border-foreground">
+                <span className="absolute -top-3.5 -left-3.5 size-6 rounded-full border-[3px] border-foreground bg-background [clip-path:inset(0_0_0_50%)]" />
+                <span className="absolute -top-3.5 -right-3.5 size-6 rounded-full border-[3px] border-foreground bg-background [clip-path:inset(0_50%_0_0)]" />
             </div>
-        </section>
-    );
-}
-
-function Tiles({ rows }: { rows: Array<[string, React.ReactNode]> }) {
-    return (
-        <aside className="grid h-fit grid-cols-2 gap-3 lg:grid-cols-1">
-            {rows.map(([label, value], i) => (
-                <div
-                    key={label}
-                    className={cn(
-                        'rounded-2xl border-2 border-foreground px-4 py-3',
-                        TILE_COLOURS[i % TILE_COLOURS.length],
-                    )}
-                >
-                    <p className="text-xs font-semibold tracking-wide uppercase opacity-75">{label}</p>
-                    <p className="font-display text-lg leading-tight font-semibold break-words">{value}</p>
-                </div>
-            ))}
+            <dl className="grid gap-3 px-5 py-4">
+                {rows.map(([label, value]) => (
+                    <div key={label}>
+                        <dt className="text-sm text-muted-foreground">{label}</dt>
+                        <dd className="font-bold break-words">{value}</dd>
+                    </div>
+                ))}
+            </dl>
         </aside>
     );
 }
 
-function Box({ title, children }: { title: string; children: React.ReactNode }) {
+function Layout({
+    hero,
+    aside,
+    children,
+}: {
+    hero: React.ReactNode;
+    aside: React.ReactNode;
+    children: React.ReactNode;
+}) {
     return (
-        <section className={cn(chunky, 'p-5')}>
-            <h2 className="mb-3 font-display text-2xl font-bold">{title}</h2>
-            {children}
-        </section>
+        <main className={wrap}>
+            {hero}
+            <div className="grid gap-8 py-10 lg:grid-cols-[minmax(0,1fr)_17rem]">
+                <div className="grid min-w-0 content-start gap-10">{children}</div>
+                {aside}
+            </div>
+        </main>
     );
 }
 
-function Pills({ items, empty }: { items: Array<string>; empty: string }) {
-    return items.length === 0 ? (
-        <p className="text-muted-foreground italic">{empty}</p>
-    ) : (
-        <ul className="flex flex-wrap gap-2">
-            {items.map((item, i) => (
+function Heading({ children }: { children: string }) {
+    return <h2 className="mb-4 font-display text-2xl">{children}</h2>;
+}
+
+/** Areas as plates on a signpost, alternating sides of the pole. */
+function Signpost({ areas }: { areas: Array<string> }) {
+    if (areas.length === 0) return <p className="text-lg">No signposts yet: this Park has no Areas recorded.</p>;
+    const rows = Math.ceil(areas.length / 2);
+    return (
+        <ul className="grid grid-cols-[minmax(0,1fr)_0.75rem_minmax(0,1fr)] gap-y-2">
+            <li
+                aria-hidden="true"
+                className="col-start-2 rounded-full bg-foreground"
+                style={{ gridRow: `1 / span ${rows + 1}` }}
+            />
+            {areas.map((area, i) => {
+                const left = i % 2 === 0;
+                return (
+                    <li
+                        key={area}
+                        style={{ gridRow: Math.floor(i / 2) + 1 }}
+                        className={cn(
+                            'max-w-full truncate py-1.5 text-sm font-bold',
+                            PLATES[i % PLATES.length],
+                            left
+                                ? 'col-start-1 justify-self-end pr-3 pl-5 [clip-path:polygon(0.75rem_0,100%_0,100%_100%,0.75rem_100%,0_50%)]'
+                                : 'col-start-3 justify-self-start pr-5 pl-3 [clip-path:polygon(0_0,calc(100%-0.75rem)_0,100%_50%,calc(100%-0.75rem)_100%,0_100%)]',
+                        )}
+                    >
+                        {area}
+                    </li>
+                );
+            })}
+        </ul>
+    );
+}
+
+/** Rides listed like the board by a queue line. */
+function RideBoard({ rides }: { rides: Array<Ride> }) {
+    return (
+        <ul className="overflow-hidden rounded-3xl bg-[#1b2a4a] text-[#fff4d6] dark:bg-card">
+            {rides.map(ride => (
                 <li
-                    key={item}
-                    className={cn(
-                        'rounded-full border-2 border-foreground px-3 py-1 text-sm font-medium',
-                        i % 3 === 0
-                            ? 'bg-secondary text-secondary-foreground'
-                            : i % 3 === 1
-                              ? 'bg-accent text-accent-foreground'
-                              : 'bg-card',
-                    )}
+                    key={ride.id}
+                    className="flex items-center justify-between gap-4 border-b-2 border-dashed border-white/15 px-5 py-3 last:border-0"
                 >
-                    {item}
+                    <span className="flex min-w-0 items-center gap-3">
+                        <StatusDot status={currentStatus(ride.statusHistory)} className="size-3" />
+                        <PreviewLink
+                            kind="ride"
+                            id={ride.id}
+                            className="truncate font-bold underline decoration-secondary decoration-2 underline-offset-4 hover:text-secondary"
+                        >
+                            {ride.name}
+                        </PreviewLink>
+                    </span>
+                    <span className="shrink-0 rounded-full bg-secondary px-2.5 py-0.5 text-sm font-bold text-[#1b2a4a]">
+                        {ride.category}
+                    </span>
                 </li>
             ))}
         </ul>
     );
 }
 
-function CardGrid({ children }: { children: React.ReactNode }) {
-    return <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{children}</ul>;
-}
+const yearOf = (park: Park) => {
+    const opened = openedOf(park.statusHistory);
+    if (opened) return opened.slice(0, 4);
+    const everOperated = park.statusHistory.some(entry => entry.status === 'operating');
+    return park.statusHistory.length && !everOperated ? 'Soon' : '?';
+};
 
-function Card({
-    kind,
-    id,
-    name,
-    sub,
-    tag,
-}: {
-    kind: 'park' | 'ride' | 'resort';
-    id: string;
-    name: string;
-    sub?: string | null;
-    tag?: string | null;
-}) {
+/** A Park as an admission ticket with a tear-off stub. */
+function Ticket({ park }: { park: Park }) {
     return (
-        <li>
-            <PreviewLink
-                kind={kind}
-                id={id}
-                className={cn(
-                    chunky,
-                    'group block h-full overflow-hidden transition hover:-translate-y-1 hover:rotate-[-0.5deg]',
-                )}
-            >
-                <div className="relative">
-                    <Placeholder name={name} className="aspect-[16/10] w-full border-b-2 border-foreground" />
-                    {tag && (
-                        <span className="absolute top-3 left-3 rounded-full border-2 border-foreground bg-card px-2.5 py-0.5 text-xs font-semibold">
-                            {tag}
-                        </span>
-                    )}
-                </div>
-                <div className="p-4">
-                    <p className="line-clamp-2 font-display text-xl leading-tight font-bold group-hover:text-primary">
-                        {name}
+        <Link to="/parks/$park" params={{ park: park.id }} className={cn(board, 'group flex h-full overflow-hidden')}>
+            <div className="min-w-0 flex-1 p-3">
+                <Placeholder name={park.name} className="aspect-[16/9] w-full rounded-xl" />
+                <p className="mt-3 line-clamp-2 text-lg leading-tight font-extrabold group-hover:underline">
+                    {park.name}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                    {flag(park.country)} {countryName(park.country)}
+                </p>
+                {statusLine(park.statusHistory) && (
+                    <p className="mt-2 flex items-center gap-2 text-sm font-semibold">
+                        <StatusDot status={currentStatus(park.statusHistory)} />
+                        {statusLine(park.statusHistory)}
                     </p>
-                    {sub && <p className="mt-1 text-sm text-muted-foreground">{sub}</p>}
-                </div>
-            </PreviewLink>
-        </li>
-    );
-}
-
-const opened = (thing: Park | Ride) => thing.statusHistory.find(entry => entry.status === 'operating')?.began ?? null;
-
-function Page({ hero, main, aside }: { hero: React.ReactNode; main: React.ReactNode; aside: React.ReactNode }) {
-    return (
-        <main className={cn(wrap, 'py-8')}>
-            {hero}
-            <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_16rem]">
-                <div className="grid min-w-0 content-start gap-8">{main}</div>
-                {aside}
+                )}
             </div>
-        </main>
+            <div className="relative flex w-14 shrink-0 items-center justify-center border-l-[3px] border-dashed border-foreground bg-secondary text-secondary-foreground">
+                <span className="absolute -top-3 -left-3 size-6 rounded-full border-[3px] border-foreground bg-background" />
+                <span className="absolute -bottom-3 -left-3 size-6 rounded-full border-[3px] border-foreground bg-background" />
+                <span className="rotate-180 font-display text-xl [writing-mode:vertical-rl]">{yearOf(park)}</span>
+            </div>
+        </Link>
     );
 }
 
@@ -203,66 +268,38 @@ export function ParkPage({ park }: { park: Park }) {
     const rides = ridesIn(park.id);
     const status = currentStatus(park.statusHistory);
     return (
-        <Page
+        <Layout
             hero={
-                <Hero kind={`${flag(park.country)} Park in ${countryName(park.country)}`} name={park.name}>
-                    <StatusSticker text={statusLine(park.statusHistory)} />
-                    {resort && (
-                        <p className="mt-4 font-medium">
-                            Part of{' '}
-                            <PreviewLink
-                                kind="resort"
-                                id={resort.id}
-                                className="underline decoration-2 underline-offset-4"
-                            >
-                                {resort.name}
-                            </PreviewLink>
-                        </p>
-                    )}
-                </Hero>
-            }
-            main={
-                <>
-                    {rides.length > 0 && (
-                        <section>
-                            <h2 className="mb-4 font-display text-3xl font-bold">
-                                Rides <span className="text-primary">{rides.length}</span>
-                            </h2>
-                            <CardGrid>
-                                {rides.map(ride => (
-                                    <Card
-                                        key={ride.id}
-                                        kind="ride"
-                                        id={ride.id}
-                                        name={ride.name}
-                                        sub={ride.manufacturer}
-                                        tag={ride.category}
-                                    />
-                                ))}
-                            </CardGrid>
-                        </section>
-                    )}
-                    <Box title={`Areas · ${park.areas.length}`}>
-                        <Pills items={park.areas} empty="No Areas yet." />
-                    </Box>
-                    <div className="grid gap-8 md:grid-cols-2">
-                        <Box title="Status History">
-                            <StatusTable rows={park.statusHistory} />
-                        </Box>
-                        <Box title="Name History">
-                            <NameTable rows={park.nameHistory} />
-                        </Box>
-                    </div>
-                </>
+                <Marquee
+                    name={park.name}
+                    kicker={
+                        <>
+                            {flag(park.country)} {countryName(park.country)}
+                            {resort && (
+                                <>
+                                    , at{' '}
+                                    <PreviewLink
+                                        kind="resort"
+                                        id={resort.id}
+                                        className="underline decoration-secondary decoration-2 underline-offset-4"
+                                    >
+                                        {resort.name}
+                                    </PreviewLink>
+                                </>
+                            )}
+                        </>
+                    }
+                >
+                    <Pill text={statusLine(park.statusHistory)} status={status} />
+                </Marquee>
             }
             aside={
-                <Tiles
+                <FactTicket
+                    title="Park facts"
                     rows={[
-                        ['Status', status ? statusName(status) : '-'],
-                        ['Opened', <PartialDate key="o" value={opened(park)} />],
+                        ['Status', status ? statusName(status) : 'Not recorded'],
+                        ['Opened', <PartialDate key="o" value={openedOf(park.statusHistory)} />],
                         ['Operator', park.operator],
-                        ['Rides', rides.length],
-                        ['Areas', park.areas.length],
                         ...(park.website
                             ? [
                                   [
@@ -276,84 +313,105 @@ export function ParkPage({ park }: { park: Park }) {
                     ]}
                 />
             }
-        />
+        >
+            {rides.length > 0 && (
+                <section>
+                    <Heading>{`${rides.length} Rides`}</Heading>
+                    <RideBoard rides={rides} />
+                </section>
+            )}
+            <section>
+                <Heading>{`${park.areas.length} Areas`}</Heading>
+                <Signpost areas={park.areas} />
+            </section>
+            <div className="grid gap-8 md:grid-cols-2">
+                <section className={cn(board, 'p-5')}>
+                    <Heading>Status History</Heading>
+                    <StatusTable rows={park.statusHistory} />
+                </section>
+                <section className={cn(board, 'p-5')}>
+                    <Heading>Name History</Heading>
+                    <NameTable rows={park.nameHistory} />
+                </section>
+            </div>
+        </Layout>
     );
 }
 
-function CountryPills({ list }: { list: ParksList }) {
-    const pill = (active: boolean) =>
+function CountryTokens({ list }: { list: ParksList }) {
+    const token = (active: boolean) =>
         cn(
-            'rounded-full border-2 border-foreground px-3 py-1 text-sm font-medium transition',
+            'flex w-full items-center gap-3 rounded-full border-[3px] border-foreground px-3 py-1.5 text-left font-semibold',
             active
-                ? 'bg-primary text-primary-foreground shadow-[2px_2px_0_var(--foreground)]'
+                ? 'bg-primary text-primary-foreground'
                 : 'bg-card hover:bg-secondary hover:text-secondary-foreground',
         );
     return (
-        <div className="flex flex-wrap gap-2">
-            <button type="button" className={pill(!list.country)} onClick={() => list.setCountry(undefined)}>
-                🌍 Everywhere
-            </button>
-            {list.countries.map(country => (
-                <button
-                    key={country.code}
-                    type="button"
-                    className={pill(list.country === country.code)}
-                    onClick={() => list.setCountry(country.code)}
-                >
-                    {flag(country.code)} {country.name} <span className="opacity-60">{country.count}</span>
+        <ul className="grid gap-2">
+            <li>
+                <button type="button" className={token(!list.country)} onClick={() => list.setCountry(undefined)}>
+                    <span className="text-xl">🎡</span> Anywhere
                 </button>
+            </li>
+            {list.countries.map(country => (
+                <li key={country.code}>
+                    <button
+                        type="button"
+                        className={token(list.country === country.code)}
+                        onClick={() => list.setCountry(country.code)}
+                    >
+                        <span className="text-xl">{flag(country.code)}</span>
+                        <span className="flex-1">{country.name}</span>
+                        <span className="tabular">{country.count}</span>
+                    </button>
+                </li>
             ))}
-        </div>
+        </ul>
     );
 }
 
 export function ParksPage() {
     const list = useParksList();
     return (
-        <main className={cn(wrap, 'py-8')}>
-            <h1 className="font-display text-6xl font-bold">
-                Parks<span className="text-primary">!</span>
-            </h1>
-            <p className="mt-1 text-lg text-muted-foreground">
-                {list.total} {list.country ? `in ${countryName(list.country)}` : 'to explore'}
-            </p>
-            <div className="mt-8 grid gap-8 lg:grid-cols-[15rem_1fr]">
-                <aside className={cn(chunky, 'hidden h-fit bg-muted p-4 lg:block')}>
-                    <h2 className="mb-3 font-display text-xl font-bold">Where?</h2>
-                    <CountryPills list={list} />
+        <main className={wrap}>
+            <div className="flex flex-wrap items-end justify-between gap-4 pt-10 pb-8">
+                <div>
+                    <h1 className="font-display text-5xl sm:text-6xl">Pick a park</h1>
+                    <p className="mt-2 text-lg">
+                        {list.total} {list.total === 1 ? 'ticket' : 'tickets'}{' '}
+                        {list.country ? `for ${countryName(list.country)}` : 'from around the world'}
+                    </p>
+                </div>
+                <div className="lg:hidden">
+                    <Sheet
+                        title="Where to?"
+                        trigger={
+                            <Button variant="outline">
+                                {list.country ? `${flag(list.country)} ${countryName(list.country)}` : '🎡 Anywhere'}
+                            </Button>
+                        }
+                    >
+                        <CountryTokens list={list} />
+                    </Sheet>
+                </div>
+            </div>
+            <div className="grid gap-8 pb-10 lg:grid-cols-[15rem_minmax(0,1fr)]">
+                <aside className="hidden lg:block">
+                    <h2 className="mb-3 font-display text-lg">Where to?</h2>
+                    <CountryTokens list={list} />
                 </aside>
                 <div>
-                    <div className="mb-5 lg:hidden">
-                        <Sheet
-                            title="Where?"
-                            trigger={
-                                <Button variant="outline">
-                                    <SlidersHorizontalIcon className="size-4" />{' '}
-                                    {list.country
-                                        ? `${flag(list.country)} ${countryName(list.country)}`
-                                        : 'Pick a country'}
-                                </Button>
-                            }
-                        >
-                            <CountryPills list={list} />
-                        </Sheet>
-                    </div>
-                    <CardGrid>
+                    <ul className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                         {list.parks.map(park => (
-                            <Card
-                                key={park.id}
-                                kind="park"
-                                id={park.id}
-                                name={park.name}
-                                sub={statusLine(park.statusHistory)}
-                                tag={`${flag(park.country)} ${park.country}`}
-                            />
+                            <li key={park.id}>
+                                <Ticket park={park} />
+                            </li>
                         ))}
-                    </CardGrid>
+                    </ul>
                     {list.hasMore && (
                         <div className="mt-10 flex justify-center">
                             <Button size="lg" onClick={list.loadMore}>
-                                Load more parks
+                                Load more tickets
                             </Button>
                         </div>
                     )}
@@ -363,140 +421,194 @@ export function ParksPage() {
     );
 }
 
+/** "You must be this tall": the ride's height on a measuring stick. */
+function HeightStick({ height }: { height?: number }) {
+    if (!height) return <p className="text-lg">Nobody has measured this one yet.</p>;
+    const top = Math.max(60, Math.ceil(height / 10) * 10);
+    const buses = Math.round(height / 4.4);
+    return (
+        <div className="flex items-end gap-6">
+            <div className="relative h-72 w-16 rounded-full border-[3px] border-foreground bg-card">
+                {Array.from({ length: top / 10 + 1 }, (_, i) => i * 10).map(metres => (
+                    <span
+                        key={metres}
+                        className="absolute left-0 w-3 border-t-2 border-foreground"
+                        style={{ bottom: `${(metres * 100) / top}%` }}
+                    />
+                ))}
+                <div
+                    className="absolute inset-x-1.5 bottom-1.5 rounded-full bg-[repeating-linear-gradient(0deg,var(--primary)_0_14px,#fff_14px_28px)]"
+                    style={{ height: `calc(${(height * 100) / top}% - 0.75rem)` }}
+                />
+            </div>
+            <div>
+                <p className="font-display text-5xl">{height} m</p>
+                <p className="mt-1 text-lg">
+                    About {buses} double-decker {buses === 1 ? 'bus' : 'buses'} stacked up.
+                </p>
+            </div>
+        </div>
+    );
+}
+
 export function RidePage({ ride }: { ride: Ride }) {
     const park = findPark(ride.park);
+    const status = currentStatus(ride.statusHistory);
     return (
-        <Page
+        <Layout
             hero={
-                <Hero kind={`${ride.category} Ride`} name={ride.name}>
-                    <StatusSticker text={statusLine(ride.statusHistory)} />
-                    {park && (
-                        <p className="mt-4 font-medium">
-                            At{' '}
-                            <PreviewLink kind="park" id={park.id} className="underline decoration-2 underline-offset-4">
-                                {park.name}
-                            </PreviewLink>
-                            {ride.area && ` · ${ride.area}`}
-                        </p>
-                    )}
-                </Hero>
-            }
-            main={
-                <div className="grid gap-8 md:grid-cols-2">
-                    <Box title="Status History">
-                        <StatusTable rows={ride.statusHistory} />
-                    </Box>
-                    <Box title="Name History">
-                        <NameTable rows={ride.nameHistory} />
-                    </Box>
-                </div>
+                <Marquee
+                    name={ride.name}
+                    kicker={
+                        park ? (
+                            <>
+                                {ride.category} at{' '}
+                                <PreviewLink
+                                    kind="park"
+                                    id={park.id}
+                                    className="underline decoration-secondary decoration-2 underline-offset-4"
+                                >
+                                    {park.name}
+                                </PreviewLink>
+                            </>
+                        ) : (
+                            ride.category
+                        )
+                    }
+                >
+                    <Pill text={statusLine(ride.statusHistory)} status={status} />
+                </Marquee>
             }
             aside={
-                <Tiles
+                <FactTicket
+                    title="Ride facts"
                     rows={[
-                        ['Height', ride.heightM ? `${ride.heightM} m` : '-'],
-                        ['Top speed', ride.speedKmh ? `${ride.speedKmh} km/h` : '-'],
+                        ['Area', ride.area ?? 'Not recorded'],
                         ['Manufacturer', ride.manufacturer],
-                        ['Ride Model', ride.model ?? '-'],
-                        ['Category', ride.category],
-                        ['Opened', <PartialDate key="o" value={opened(ride)} />],
+                        ['Ride Model', ride.model ?? 'None'],
+                        ['Top speed', ride.speedKmh ? `${ride.speedKmh} km/h` : 'Not recorded'],
+                        ['Opened', <PartialDate key="o" value={openedOf(ride.statusHistory)} />],
                     ]}
                 />
             }
-        />
+        >
+            <section>
+                <Heading>How tall?</Heading>
+                <HeightStick height={ride.heightM} />
+            </section>
+            <div className="grid gap-8 md:grid-cols-2">
+                <section className={cn(board, 'p-5')}>
+                    <Heading>Status History</Heading>
+                    <StatusTable rows={ride.statusHistory} />
+                </section>
+                <section className={cn(board, 'p-5')}>
+                    <Heading>Name History</Heading>
+                    <NameTable rows={ride.nameHistory} />
+                </section>
+            </div>
+        </Layout>
     );
 }
 
 export function ResortPage({ resort }: { resort: Resort }) {
     return (
-        <Page
+        <Layout
             hero={
-                <Hero kind={`${flag(resort.country)} Resort in ${countryName(resort.country)}`} name={resort.name}>
-                    <p className="font-display text-xl font-semibold">
-                        {resort.parks.length} {resort.parks.length === 1 ? 'Park' : 'Parks'} · {resort.hotels.length}{' '}
+                <Marquee name={resort.name} kicker={`${flag(resort.country)} Resort in ${countryName(resort.country)}`}>
+                    <p className="mt-5 text-xl font-bold">
+                        {resort.parks.length} {resort.parks.length === 1 ? 'Park' : 'Parks'} and {resort.hotels.length}{' '}
                         {resort.hotels.length === 1 ? 'Hotel' : 'Hotels'}
                     </p>
-                </Hero>
-            }
-            main={
-                <>
-                    <section>
-                        <h2 className="mb-4 font-display text-3xl font-bold">Parks</h2>
-                        <CardGrid>
-                            {resort.parks.map(id => {
-                                const park = findPark(id);
-                                return park ? (
-                                    <Card
-                                        key={id}
-                                        kind="park"
-                                        id={id}
-                                        name={park.name}
-                                        sub={statusLine(park.statusHistory)}
-                                    />
-                                ) : null;
-                            })}
-                        </CardGrid>
-                    </section>
-                    <Box title="Hotels">
-                        <ul className="grid gap-3 sm:grid-cols-2">
-                            {resort.hotels.map(hotel => (
-                                <li key={hotel.name} className="flex items-center gap-3 rounded-2xl bg-muted p-2">
-                                    <Placeholder
-                                        name={hotel.name}
-                                        className="size-14 rounded-xl border-2 border-foreground"
-                                    />
-                                    <div>
-                                        <p className="font-display font-semibold">{hotel.name}</p>
-                                        <p className="text-sm text-muted-foreground">
-                                            Opened <PartialDate value={hotel.opened} />
-                                        </p>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    </Box>
-                    <Box title="Name History">
-                        <NameTable rows={resort.nameHistory} />
-                    </Box>
-                </>
+                </Marquee>
             }
             aside={
-                <Tiles
+                <FactTicket
+                    title="Resort facts"
                     rows={[
                         ['Operator', resort.operator],
-                        ['Parks', resort.parks.length],
-                        ['Hotels', resort.hotels.length],
+                        ['Country', countryName(resort.country)],
                     ]}
                 />
             }
-        />
+        >
+            <section>
+                <Heading>Parks</Heading>
+                <ul className="grid gap-6 sm:grid-cols-2">
+                    {resort.parks.map(id => {
+                        const park = findPark(id);
+                        return park ? (
+                            <li key={id}>
+                                <Ticket park={park} />
+                            </li>
+                        ) : null;
+                    })}
+                </ul>
+            </section>
+            <section>
+                <Heading>Hotels</Heading>
+                <ul className="grid gap-3">
+                    {resort.hotels.map((hotel, i) => (
+                        <li
+                            key={hotel.name}
+                            className={cn(
+                                'flex items-center justify-between gap-4 rounded-2xl px-5 py-3 font-bold',
+                                PLATES[i % PLATES.length],
+                            )}
+                        >
+                            {hotel.name}
+                            <span className="font-semibold">
+                                {hotel.opened ? (
+                                    <>
+                                        Opened <PartialDate value={hotel.opened} />
+                                    </>
+                                ) : (
+                                    'Opening date unknown'
+                                )}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            </section>
+            <section className={cn(board, 'p-5')}>
+                <Heading>Name History</Heading>
+                <NameTable rows={resort.nameHistory} />
+            </section>
+        </Layout>
     );
 }
 
 export function FormPage() {
     const state = useSampleForm();
     return (
-        <main className={cn(wrap, 'py-8')}>
-            <div className={cn(chunky, 'mx-auto max-w-2xl p-6 md:p-10')}>
-                <h1 className="font-display text-5xl font-bold">
-                    Add a Park <span className="inline-block rotate-12">🎢</span>
-                </h1>
-                <p className="mt-2 mb-8 text-lg text-muted-foreground">
-                    A Moderator checks every suggestion before it goes live.
-                </p>
-                <SampleForm
-                    state={state}
-                    actions={
-                        <div className="flex flex-wrap gap-3">
-                            <Button type="submit" size="lg">
-                                Send it!
-                            </Button>
-                            <Button type="button" variant="ghost" size="lg" onClick={state.showErrors}>
-                                Show error states
-                            </Button>
-                        </div>
-                    }
-                />
+        <main className={cn(wrap, 'py-10')}>
+            <div className={cn(board, 'mx-auto flex max-w-3xl overflow-hidden')}>
+                <div className="min-w-0 flex-1 p-6 sm:p-10">
+                    <h1 className="font-display text-4xl">Add a Park</h1>
+                    <p className="mt-2 mb-8 text-lg">
+                        Know a park we’re missing? Tell us the basics and a Moderator will check it.
+                    </p>
+                    <SampleForm
+                        state={state}
+                        actions={
+                            <div className="flex flex-wrap gap-4">
+                                <Button type="submit" size="lg">
+                                    Add Park
+                                </Button>
+                                <Button type="button" variant="ghost" size="lg" onClick={state.showErrors}>
+                                    Show error states
+                                </Button>
+                            </div>
+                        }
+                    />
+                </div>
+                <div
+                    aria-hidden="true"
+                    className="relative hidden w-20 shrink-0 items-center justify-center border-l-[3px] border-dashed border-foreground bg-primary text-primary-foreground sm:flex"
+                >
+                    <span className="rotate-180 font-display text-2xl [writing-mode:vertical-rl]">
+                        Admit one new Park
+                    </span>
+                </div>
             </div>
         </main>
     );
@@ -504,9 +616,9 @@ export function FormPage() {
 
 export function Footer({ children }: { children: React.ReactNode }) {
     return (
-        <footer className="mt-16 bg-header text-header-foreground">
-            <div className={cn(wrap, 'flex h-20 items-center justify-between font-display')}>
-                <span>Made by fans · Data ODbL · Code AGPL</span>
+        <footer className="mt-16 bg-[#1b2a4a] text-[#fff4d6] dark:bg-[#0a1226]">
+            <div className={cn(wrap, 'flex flex-wrap justify-between gap-4 py-8 font-semibold')}>
+                <span>Built by fans. Data under ODbL, code under AGPL.</span>
                 {children}
             </div>
         </footer>

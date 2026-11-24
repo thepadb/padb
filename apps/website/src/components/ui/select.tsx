@@ -5,9 +5,9 @@ import { cn } from '@/lib/utils';
 import { inputClasses } from './field';
 
 export const popupClasses =
-    'origin-(--transform-origin) rounded-md border bg-popover text-popover-foreground shadow-lg outline-none transition-[scale,opacity] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0 design-b:rounded-none design-b:shadow-sm design-c:rounded-xl design-c:border-2 design-c:shadow-[4px_4px_0_var(--foreground)]';
+    'origin-(--transform-origin) rounded-sm border bg-popover text-popover-foreground shadow-lg outline-none transition-[scale,opacity] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0 design-b:rounded-[3px] design-c:rounded-xl design-c:border-2 design-c:shadow-[0_5px_0_var(--foreground)]';
 export const itemClasses =
-    'grid cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none data-highlighted:bg-muted design-c:data-highlighted:bg-secondary design-c:data-highlighted:text-secondary-foreground';
+    'grid cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none data-highlighted:bg-muted design-b:data-highlighted:bg-secondary design-c:rounded-lg design-c:data-highlighted:bg-secondary design-c:data-highlighted:text-secondary-foreground';
 
 export function Select({
     items,

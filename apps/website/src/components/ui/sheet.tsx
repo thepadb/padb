@@ -22,7 +22,7 @@ export function Sheet({
                 <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/40 transition-opacity data-ending-style:opacity-0 data-starting-style:opacity-0" />
                 <Dialog.Popup
                     className={cn(
-                        'fixed inset-y-0 left-0 z-50 flex w-[85vw] max-w-sm flex-col gap-4 overflow-y-auto border-r bg-background p-5 shadow-xl transition-transform duration-200 data-ending-style:-translate-x-full data-starting-style:-translate-x-full design-c:rounded-r-3xl design-c:border-r-2',
+                        'fixed inset-y-0 left-0 z-50 flex w-[85vw] max-w-sm flex-col gap-4 overflow-y-auto border-r bg-background p-5 shadow-xl transition-transform duration-200 data-ending-style:-translate-x-full data-starting-style:-translate-x-full design-c:rounded-r-3xl design-c:border-r-4',
                         className,
                     )}
                 >

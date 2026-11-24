@@ -3,8 +3,15 @@ import { Field as BaseField } from '@base-ui/react/field';
 import type * as React from 'react';
 import { cn } from '@/lib/utils';
 
-export const inputClasses =
-    'h-9 w-full min-w-0 rounded-md border border-input bg-card px-3 text-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/25 data-invalid:border-destructive data-invalid:ring-destructive/20 design-b:rounded-none design-b:border-0 design-b:border-b design-b:bg-transparent design-b:px-0 design-b:focus-visible:ring-0 design-c:h-11 design-c:rounded-xl design-c:border-2 design-c:px-4 design-c:text-base';
+export const inputClasses = [
+    'h-10 w-full min-w-0 bg-transparent text-base outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground data-invalid:border-destructive',
+    // A: a single ruled line, like a form on a sign
+    'border-0 border-b-2 border-input px-0 focus-visible:border-foreground',
+    // B: a boxed field on a record sheet
+    'design-b:rounded-[3px] design-b:border design-b:bg-card design-b:px-3 design-b:text-sm design-b:focus-visible:border-primary design-b:focus-visible:ring-3 design-b:focus-visible:ring-primary/20',
+    // C: a chunky ticket-booth field
+    'design-c:h-12 design-c:rounded-xl design-c:border-2 design-c:bg-card design-c:px-4 design-c:focus-visible:ring-4 design-c:focus-visible:ring-secondary',
+].join(' ');
 
 export function Field({ className, ...props }: React.ComponentProps<typeof BaseField.Root>) {
     return <BaseField.Root className={cn('flex flex-col gap-1.5', className)} {...props} />;
@@ -14,7 +21,7 @@ export function FieldLabel({ className, ...props }: React.ComponentProps<typeof 
     return (
         <BaseField.Label
             className={cn(
-                'text-sm font-medium data-invalid:text-destructive design-b:font-mono design-b:text-[0.7rem] design-b:uppercase design-b:tracking-widest design-b:text-muted-foreground design-c:font-display design-c:text-base',
+                'text-sm font-semibold data-invalid:text-destructive design-b:font-medium design-c:text-base design-c:font-bold',
                 className,
             )}
             {...props}

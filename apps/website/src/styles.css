@@ -1,12 +1,14 @@
 /* PROTOTYPE (issue #41): three design directions as token sets on <html data-design>. Never merged. */
 @import "tailwindcss";
-@import "@fontsource-variable/archivo";
-@import "@fontsource-variable/inter";
-@import "@fontsource-variable/source-serif-4";
-@import "@fontsource/ibm-plex-mono/400.css";
-@import "@fontsource/ibm-plex-mono/500.css";
-@import "@fontsource-variable/bricolage-grotesque";
-@import "@fontsource-variable/fredoka";
+@import "@fontsource-variable/overpass";
+@import "@fontsource-variable/public-sans";
+@import "@fontsource/libre-caslon-text/400.css";
+@import "@fontsource/libre-caslon-text/400-italic.css";
+@import "@fontsource/libre-caslon-text/700.css";
+@import "@fontsource/bungee";
+@import "@fontsource-variable/figtree";
+
+@source inline("border-st-{ok,pause,stop,none}");
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant design-a (&:where([data-design="A"], [data-design="A"] *));
@@ -17,9 +19,8 @@
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --color-card: var(--card);
-    --color-card-foreground: var(--card-foreground);
-    --color-popover: var(--popover);
-    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--card);
+    --color-popover-foreground: var(--foreground);
     --color-primary: var(--primary);
     --color-primary-foreground: var(--primary-foreground);
     --color-secondary: var(--secondary);
@@ -32,166 +33,151 @@
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
-    --color-header: var(--header);
-    --color-header-foreground: var(--header-foreground);
-    --color-hero: var(--hero);
-    --color-hero-foreground: var(--hero-foreground);
+    --color-st-ok: var(--st-ok);
+    --color-st-pause: var(--st-pause);
+    --color-st-stop: var(--st-stop);
+    --color-st-none: var(--st-none);
     --font-sans: var(--font-body);
     --font-display: var(--font-heading);
-    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-    --radius-sm: calc(var(--radius) * 0.6);
-    --radius-md: calc(var(--radius) * 0.8);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) * 1.4);
 }
 
-/* A: bold coloured hero band, card rails, dark header */
+/* A, Wayfinding: signage. White, slate ink, colour only where it means a Status. */
 :root,
 [data-design="A"] {
-    --font-body: "Inter Variable", system-ui, sans-serif;
-    --font-heading: "Archivo Variable", system-ui, sans-serif;
-    --radius: 0.75rem;
-    --background: oklch(0.985 0.003 250);
-    --foreground: oklch(0.2 0.02 260);
-    --card: oklch(1 0 0);
-    --card-foreground: var(--foreground);
-    --popover: var(--card);
-    --popover-foreground: var(--foreground);
-    --primary: oklch(0.52 0.2 262);
-    --primary-foreground: oklch(0.99 0 0);
-    --secondary: oklch(0.94 0.02 262);
-    --secondary-foreground: oklch(0.3 0.08 262);
-    --muted: oklch(0.955 0.006 260);
-    --muted-foreground: oklch(0.5 0.02 260);
-    --accent: oklch(0.82 0.16 75);
-    --accent-foreground: oklch(0.25 0.05 60);
-    --destructive: oklch(0.58 0.22 27);
-    --border: oklch(0.9 0.01 260);
-    --input: oklch(0.86 0.01 260);
-    --ring: var(--primary);
-    --header: oklch(0.18 0.02 265);
-    --header-foreground: oklch(0.97 0 0);
-    --hero: oklch(0.45 0.2 262);
-    --hero-foreground: oklch(0.99 0 0);
-    --ph-chroma: 0.12;
-    --ph-light: 0.72;
-    --ph-ink: 0.3;
-}
-.dark {
-    --ph-ink: 0.92;
+    --font-body: "Overpass Variable", system-ui, sans-serif;
+    --font-heading: "Overpass Variable", system-ui, sans-serif;
+    --background: #ffffff;
+    --foreground: #1b2733;
+    --card: #ffffff;
+    --primary: #1b2733;
+    --primary-foreground: #ffffff;
+    --secondary: #f2f4f6;
+    --secondary-foreground: #1b2733;
+    --muted: #f2f4f6;
+    --muted-foreground: #5e6b78;
+    --accent: #f2f4f6;
+    --accent-foreground: #1b2733;
+    --destructive: #c5221f;
+    --border: #dce1e6;
+    --input: #b9c2cb;
+    --ring: #1b2733;
+    --st-ok: #1e8e3e;
+    --st-pause: #c77700;
+    --st-stop: #c5221f;
+    --st-none: #8a96a3;
+    --ph-chroma: 0;
+    --ph-light: 0.94;
+    --ph-ink: 0.55;
 }
 [data-design="A"].dark {
-    --background: oklch(0.16 0.015 265);
-    --foreground: oklch(0.95 0.005 260);
-    --card: oklch(0.21 0.02 265);
-    --primary: oklch(0.68 0.17 262);
-    --primary-foreground: oklch(0.15 0.03 262);
-    --secondary: oklch(0.27 0.04 262);
-    --secondary-foreground: oklch(0.9 0.03 262);
-    --muted: oklch(0.24 0.015 265);
-    --muted-foreground: oklch(0.7 0.015 260);
-    --border: oklch(0.3 0.02 265);
-    --input: oklch(0.35 0.02 265);
-    --header: oklch(0.11 0.01 265);
-    --hero: oklch(0.36 0.16 262);
-    --ph-chroma: 0.09;
-    --ph-light: 0.42;
+    --background: #1b2733;
+    --foreground: #eef1f4;
+    --card: #223040;
+    --primary: #eef1f4;
+    --primary-foreground: #1b2733;
+    --secondary: #26364a;
+    --secondary-foreground: #eef1f4;
+    --muted: #24323f;
+    --muted-foreground: #a3afbb;
+    --border: #34444f;
+    --input: #4a5b69;
+    --ring: #eef1f4;
+    --st-ok: #4cc26e;
+    --st-pause: #f0a830;
+    --st-stop: #f0625b;
+    --st-none: #7d8a97;
+    --ph-light: 0.3;
+    --ph-ink: 0.7;
 }
 
-/* B: editorial / encyclopaedic, type-led, near-monochrome */
+/* B, Register: a heritage record. Heritage green, cool paper, stone, brass. */
 [data-design="B"] {
-    --font-body: "Source Serif 4 Variable", Georgia, serif;
-    --font-heading: "Source Serif 4 Variable", Georgia, serif;
-    --radius: 0.125rem;
-    --background: oklch(0.99 0.004 85);
-    --foreground: oklch(0.18 0.005 85);
-    --card: var(--background);
-    --card-foreground: var(--foreground);
-    --popover: oklch(1 0 0);
-    --popover-foreground: var(--foreground);
-    --primary: oklch(0.42 0.12 25);
-    --primary-foreground: oklch(0.99 0 0);
-    --secondary: oklch(0.95 0.005 85);
-    --secondary-foreground: var(--foreground);
-    --muted: oklch(0.955 0.006 85);
-    --muted-foreground: oklch(0.45 0.008 85);
-    --accent: oklch(0.95 0.006 85);
-    --accent-foreground: var(--foreground);
-    --destructive: oklch(0.5 0.19 27);
-    --border: oklch(0.85 0.006 85);
-    --input: oklch(0.6 0.006 85);
-    --ring: var(--foreground);
-    --header: var(--background);
-    --header-foreground: var(--foreground);
-    --hero: var(--background);
-    --hero-foreground: var(--foreground);
-    --ph-chroma: 0.015;
+    --font-body: "Public Sans Variable", system-ui, sans-serif;
+    --font-heading: "Libre Caslon Text", Georgia, serif;
+    --background: #f7f8f6;
+    --foreground: #1a1d1c;
+    --card: #ffffff;
+    --primary: #1f3d36;
+    --primary-foreground: #f7f8f6;
+    --secondary: #e4ebe7;
+    --secondary-foreground: #1f3d36;
+    --muted: #eceeea;
+    --muted-foreground: #59625e;
+    --accent: #9c7a3c;
+    --accent-foreground: #ffffff;
+    --destructive: #a52a1f;
+    --border: #d9ddd8;
+    --input: #b4bbb6;
+    --ring: #1f3d36;
+    --st-ok: #2f7d5b;
+    --st-pause: #9c7a3c;
+    --st-stop: #a52a1f;
+    --st-none: #7a837f;
+    --ph-chroma: 0.025;
     --ph-light: 0.86;
+    --ph-ink: 0.35;
 }
 [data-design="B"].dark {
-    --background: oklch(0.17 0.004 85);
-    --foreground: oklch(0.9 0.006 85);
-    --popover: oklch(0.21 0.004 85);
-    --primary: oklch(0.72 0.11 30);
-    --primary-foreground: oklch(0.15 0 0);
-    --secondary: oklch(0.23 0.005 85);
-    --muted: oklch(0.22 0.005 85);
-    --muted-foreground: oklch(0.65 0.008 85);
-    --accent: oklch(0.24 0.005 85);
-    --border: oklch(0.32 0.005 85);
-    --input: oklch(0.45 0.005 85);
-    --ph-chroma: 0.012;
-    --ph-light: 0.3;
+    --background: #10201c;
+    --foreground: #e8ece9;
+    --card: #162a25;
+    --primary: #a9cfc2;
+    --primary-foreground: #10201c;
+    --secondary: #1f3d36;
+    --secondary-foreground: #e8ece9;
+    --muted: #1a302a;
+    --muted-foreground: #9aa8a2;
+    --accent: #cdaa6a;
+    --accent-foreground: #10201c;
+    --border: #2c443d;
+    --input: #46605a;
+    --ring: #a9cfc2;
+    --st-ok: #6cc29a;
+    --st-pause: #cdaa6a;
+    --st-stop: #e2776c;
+    --ph-light: 0.32;
+    --ph-ink: 0.75;
 }
 
-/* C: enthusiast / playful, strong palette, rounded, expressive display font */
+/* C, Midway: the fairground. Sky, awning red, ticket yellow, teal, navy ink. */
 [data-design="C"] {
-    --font-body: "Bricolage Grotesque Variable", system-ui, sans-serif;
-    --font-heading: "Fredoka Variable", system-ui, sans-serif;
-    --radius: 1.25rem;
-    --background: oklch(0.97 0.03 95);
-    --foreground: oklch(0.22 0.08 300);
-    --card: oklch(1 0 0);
-    --card-foreground: var(--foreground);
-    --popover: var(--card);
-    --popover-foreground: var(--foreground);
-    --primary: oklch(0.62 0.25 350);
-    --primary-foreground: oklch(0.99 0 0);
-    --secondary: oklch(0.88 0.17 95);
-    --secondary-foreground: oklch(0.25 0.08 300);
-    --muted: oklch(0.93 0.04 95);
-    --muted-foreground: oklch(0.45 0.07 300);
-    --accent: oklch(0.75 0.15 195);
-    --accent-foreground: oklch(0.2 0.06 220);
-    --destructive: oklch(0.58 0.23 27);
-    --border: oklch(0.22 0.08 300);
-    --input: oklch(0.22 0.08 300);
-    --ring: oklch(0.62 0.25 350);
-    --header: oklch(0.3 0.15 300);
-    --header-foreground: oklch(0.97 0.03 95);
-    --hero: oklch(0.88 0.17 95);
-    --hero-foreground: oklch(0.22 0.08 300);
-    --ph-chroma: 0.17;
-    --ph-light: 0.78;
+    --font-body: "Figtree Variable", system-ui, sans-serif;
+    --font-heading: "Bungee", system-ui, sans-serif;
+    --background: #eaf6ff;
+    --foreground: #1b2a4a;
+    --card: #ffffff;
+    --primary: #d7263d;
+    --primary-foreground: #ffffff;
+    --secondary: #ffc83d;
+    --secondary-foreground: #1b2a4a;
+    --muted: #d6ecfb;
+    --muted-foreground: #44567a;
+    --accent: #0e7c7b;
+    --accent-foreground: #ffffff;
+    --destructive: #d7263d;
+    --border: #1b2a4a;
+    --input: #1b2a4a;
+    --ring: #d7263d;
+    --st-ok: #0e7c7b;
+    --st-pause: #e09a00;
+    --st-stop: #d7263d;
+    --st-none: #6b7a99;
+    --ph-chroma: 0.15;
+    --ph-light: 0.8;
+    --ph-ink: 0.3;
 }
 [data-design="C"].dark {
-    --background: oklch(0.2 0.06 300);
-    --foreground: oklch(0.96 0.03 95);
-    --card: oklch(0.27 0.08 300);
-    --primary: oklch(0.72 0.22 350);
-    --primary-foreground: oklch(0.15 0.05 300);
-    --secondary: oklch(0.82 0.16 95);
-    --secondary-foreground: oklch(0.2 0.06 300);
-    --muted: oklch(0.3 0.07 300);
-    --muted-foreground: oklch(0.8 0.05 300);
-    --accent: oklch(0.7 0.13 195);
-    --border: oklch(0.9 0.1 95);
-    --input: oklch(0.9 0.1 95);
-    --header: oklch(0.14 0.05 300);
-    --hero: oklch(0.36 0.15 330);
-    --hero-foreground: oklch(0.97 0.03 95);
-    --ph-chroma: 0.14;
-    --ph-light: 0.5;
+    --background: #0f1a33;
+    --foreground: #fff4d6;
+    --card: #182647;
+    --primary: #ff4d61;
+    --primary-foreground: #0f1a33;
+    --muted: #1f2f55;
+    --muted-foreground: #b5c0da;
+    --border: #fff4d6;
+    --input: #fff4d6;
+    --ph-light: 0.45;
+    --ph-ink: 0.9;
 }
 
 @layer base {
@@ -214,4 +200,33 @@
     .tabular {
         font-variant-numeric: tabular-nums;
     }
+}
+
+/* C: the marquee lights chase once on load */
+@keyframes bulb {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.2;
+    }
+}
+@media (prefers-reduced-motion: no-preference) {
+    .marquee-bulb {
+        animation: bulb 0.45s ease-in-out 3;
+        animation-delay: calc(var(--i) * 35ms);
+    }
+}
+
+/* C: a striped awning with a scalloped edge */
+.awning {
+    height: 2.25rem;
+    background: repeating-linear-gradient(90deg, var(--primary) 0 2.5rem, #ffffff 2.5rem 5rem);
+    mask:
+        linear-gradient(#000 0 0) top / 100% calc(100% - 1.25rem) no-repeat,
+        radial-gradient(circle 1.25rem at 1.25rem 0, #000 98%, transparent) bottom / 2.5rem 1.25rem repeat-x;
+}
+.dark .awning {
+    background: repeating-linear-gradient(90deg, var(--primary) 0 2.5rem, #fff4d6 2.5rem 5rem);
 }

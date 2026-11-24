@@ -13,7 +13,8 @@ function HomePage() {
         <main className="mx-auto max-w-3xl px-6 py-12">
             <h1 className="font-display text-4xl font-bold">Design prototype (#41)</h1>
             <p className="mt-2 text-muted-foreground">
-                ← / → change design, d toggles dark mode. Hover Park links for Preview Cards.
+                ← / → change design, d toggles dark mode. Hover Ride, Park and Resort links on individual pages for
+                Preview Cards.
             </p>
             <h2 className="mt-8 font-display text-xl font-semibold">Pages</h2>
             <ul className="mt-2 list-disc pl-5">

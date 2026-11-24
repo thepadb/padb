@@ -4,9 +4,9 @@ import type * as React from 'react';
 import { useEffect } from 'react';
 
 export const DESIGNS = [
-    { key: 'A', name: 'Rail' },
-    { key: 'B', name: 'Encyclopaedia' },
-    { key: 'C', name: 'Funfair' },
+    { key: 'A', name: 'Wayfinding' },
+    { key: 'B', name: 'Register' },
+    { key: 'C', name: 'Midway' },
 ] as const;
 export type Design = (typeof DESIGNS)[number]['key'];
 export type Theme = 'light' | 'dark';

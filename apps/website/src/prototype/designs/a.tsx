@@ -1,233 +1,257 @@
-// PROTOTYPE (issue #41): design A, "Rail". Bold coloured hero band, card rails, dark header.
+// PROTOTYPE (issue #41): design A, "Wayfinding". Minimal: signage type, no boxes, colour only for Status.
+// The one bold element is Status History drawn as a transit line.
 import { Link } from '@tanstack/react-router';
-import { FilterIcon, SearchIcon } from 'lucide-react';
 import type * as React from 'react';
+import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet } from '@/components/ui/sheet';
+import { statusName } from '@/lib/status';
 import { cn } from '@/lib/utils';
-import { countryName, findPark, findResort, type Park, type Resort, type Ride, ridesIn } from '../data';
+import {
+    countryName,
+    findPark,
+    findResort,
+    type Park,
+    type Resort,
+    type Ride,
+    ridesIn,
+    type StatusEntry,
+} from '../data';
 import { Placeholder } from '../placeholder';
 import { PreviewLink } from '../preview-link';
 import { SampleForm, useSampleForm } from '../sample-form';
-import { NameTable, PartialDate, type ParksList, StatusTable, useParksList } from '../shared';
+import {
+    NameTable,
+    openedOf,
+    PartialDate,
+    type ParksList,
+    StatusDot,
+    StatusTable,
+    toneOf,
+    useParksList,
+} from '../shared';
 import { currentStatus, statusLine } from '../status-line';
-import { statusName } from '@/lib/status';
+import { partialDateName } from '@/lib/partial-date';
 
-const wrap = 'mx-auto w-full max-w-7xl px-4 sm:px-6';
+const wrap = 'mx-auto w-full max-w-6xl px-5 sm:px-8';
+const h2 = 'mb-4 text-lg font-bold';
 
 export function Header() {
     return (
-        <header className="bg-header text-header-foreground">
-            <div className={cn(wrap, 'flex h-14 items-center gap-6')}>
-                <Link to="/" className="font-display text-lg font-extrabold tracking-tight">
-                    PADB<span className="text-accent">.</span>
+        <header className="border-b">
+            <div className={cn(wrap, 'flex h-16 items-center justify-between gap-6')}>
+                <Link to="/" className="flex items-center gap-2.5 font-bold">
+                    <span className="grid size-7 place-items-center rounded-sm bg-foreground text-sm text-background">
+                        P
+                    </span>
+                    <span className="hidden sm:inline">Parks &amp; Attractions Database</span>
                 </Link>
-                <nav className="flex gap-4 text-sm text-header-foreground/75 [&_a:hover]:text-header-foreground [&_a.active]:text-header-foreground">
+                <nav className="flex gap-6 text-sm text-muted-foreground [&_a.active]:text-foreground [&_a:hover]:text-foreground">
                     <Link to="/parks">Parks</Link>
                     <Link to="/resorts/$resort" params={{ resort: 'lakeside' }}>
                         Resorts
                     </Link>
-                    <Link to="/parks/new">Suggest a Park</Link>
+                    <Link to="/parks/new">Add a Park</Link>
                 </nav>
-                <div className="ml-auto hidden h-9 w-64 items-center gap-2 rounded-md bg-white/10 px-3 text-sm text-header-foreground/60 md:flex">
-                    <SearchIcon className="size-4" /> Search parks and rides
-                </div>
             </div>
         </header>
     );
 }
 
-function Hero({ children, image }: { children: React.ReactNode; image?: React.ReactNode }) {
+/** Status History as a line with a stop for each Status, coloured by how it ran. */
+function StatusLine({ rows }: { rows: Array<StatusEntry> }) {
+    if (rows.length === 0) return null;
     return (
-        <section className="bg-hero text-hero-foreground">
-            <div className={cn(wrap, 'grid items-end gap-8 py-10 md:grid-cols-[1fr_20rem] md:py-14')}>
-                <div className="min-w-0">{children}</div>
-                {image}
-            </div>
-        </section>
+        <ol className="-mx-5 flex overflow-x-auto px-5 pb-2 sm:mx-0 sm:px-0" aria-label="Status History as a line">
+            {rows.map((row, i) => {
+                const last = i === rows.length - 1;
+                return (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: entries have no IDs and a Status can recur
+                    <li key={i} className="relative min-w-32 flex-1 pt-7 pr-4">
+                        <span
+                            aria-hidden="true"
+                            className={cn(
+                                'absolute top-2 left-0 h-1.5 w-full',
+                                toneOf(row.status),
+                                last && 'opacity-35',
+                            )}
+                        />
+                        <span
+                            aria-hidden="true"
+                            className={cn(
+                                'absolute top-0 left-0 size-5.5 rounded-full border-[5px] bg-background',
+                                toneOf(row.status).replace('bg-', 'border-'),
+                            )}
+                        />
+                        <p className="font-semibold leading-tight">{statusName(row.status)}</p>
+                        <p className="text-sm text-muted-foreground tabular">
+                            {row.began ? partialDateName(row.began) : 'Date unknown'}
+                        </p>
+                    </li>
+                );
+            })}
+        </ol>
     );
 }
 
-function HeroTitle({ children }: { children: string }) {
-    return (
-        <h1 className="font-display text-4xl font-extrabold tracking-tight text-balance break-words hyphens-auto md:text-6xl">
-            {children}
-        </h1>
-    );
-}
-
-function StatusChip({ text }: { text: string | null }) {
-    return text ? (
-        <p className="mt-4 inline-flex rounded-full bg-accent px-3 py-1 text-sm font-semibold text-accent-foreground">
-            {text}
-        </p>
-    ) : null;
-}
-
-function Rail({ title, children }: { title: string; children: React.ReactNode }) {
-    return (
-        <section>
-            <h2 className="mb-3 font-display text-xl font-bold">{title}</h2>
-            <div className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-3 sm:-mx-6 sm:px-6">{children}</div>
-        </section>
-    );
-}
-
-function RailCard({
-    kind,
-    id,
+function Title({
     name,
-    sub,
+    status,
+    line,
+    context,
 }: {
-    kind: 'park' | 'ride' | 'resort';
-    id: string;
     name: string;
-    sub?: string | null;
+    status?: StatusEntry['status'];
+    line: string | null;
+    context: React.ReactNode;
 }) {
     return (
-        <PreviewLink
-            kind={kind}
-            id={id}
-            className="group w-56 shrink-0 snap-start overflow-hidden rounded-lg border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-        >
-            <Placeholder name={name} className="aspect-[4/3] w-full" />
-            <div className="p-3">
-                <p className="line-clamp-2 font-display font-semibold leading-snug group-hover:text-primary">{name}</p>
-                {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
-            </div>
-        </PreviewLink>
+        <div className="max-w-4xl pt-12 pb-8">
+            <p className="mb-3 text-muted-foreground">{context}</p>
+            <h1 className="text-4xl leading-[1.02] font-extrabold tracking-[-0.025em] text-balance break-words hyphens-auto sm:text-6xl">
+                {name}
+            </h1>
+            {line && (
+                <p className="mt-5 flex items-center gap-2.5 text-xl">
+                    <StatusDot status={status} className="size-3.5" />
+                    {line}
+                </p>
+            )}
+        </div>
     );
 }
 
 function Facts({ rows }: { rows: Array<[string, React.ReactNode]> }) {
     return (
-        <aside className="h-fit rounded-lg border bg-card p-5 shadow-sm lg:sticky lg:top-6">
-            <h2 className="mb-3 font-display text-sm font-bold tracking-wider text-muted-foreground uppercase">
-                Facts
-            </h2>
-            <dl className="grid gap-3 text-sm">
-                {rows.map(([label, value]) => (
-                    <div key={label}>
-                        <dt className="text-xs text-muted-foreground">{label}</dt>
-                        <dd className="font-medium break-words">{value}</dd>
-                    </div>
-                ))}
-            </dl>
-        </aside>
+        <dl className="grid h-fit gap-4 sm:grid-cols-2 lg:sticky lg:top-8 lg:grid-cols-1">
+            {rows.map(([label, value]) => (
+                <div key={label}>
+                    <dt className="text-sm text-muted-foreground">{label}</dt>
+                    <dd className="break-words">{value}</dd>
+                </div>
+            ))}
+        </dl>
     );
 }
 
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+function Body({ facts, children }: { facts: React.ReactNode; children: React.ReactNode }) {
     return (
-        <section className="rounded-lg border bg-card p-5 shadow-sm">
-            <h2 className="mb-3 font-display text-lg font-bold">{title}</h2>
-            {children}
-        </section>
+        <div className="grid gap-12 py-12 lg:grid-cols-[13rem_minmax(0,1fr)]">
+            {facts}
+            <div className="grid min-w-0 gap-14">{children}</div>
+        </div>
     );
 }
 
-const opened = (park: Park | Ride) => park.statusHistory.find(entry => entry.status === 'operating')?.began ?? null;
+const link = 'underline decoration-1 underline-offset-4 hover:decoration-2';
+
+function RideRows({ rides }: { rides: Array<Ride> }) {
+    return (
+        <ul className="divide-y border-y">
+            {rides.map(ride => (
+                <li key={ride.id} className="flex items-baseline justify-between gap-4 py-2.5">
+                    <span className="flex min-w-0 items-center gap-2.5">
+                        <StatusDot status={currentStatus(ride.statusHistory)} />
+                        <PreviewLink kind="ride" id={ride.id} className={link}>
+                            {ride.name}
+                        </PreviewLink>
+                    </span>
+                    <span className="shrink-0 text-sm text-muted-foreground">{ride.category}</span>
+                </li>
+            ))}
+        </ul>
+    );
+}
 
 export function ParkPage({ park }: { park: Park }) {
     const resort = park.resort ? findResort(park.resort) : undefined;
     const rides = ridesIn(park.id);
-    const status = currentStatus(park.statusHistory);
     return (
-        <main>
-            <Hero
-                image={<Placeholder name={park.name} className="aspect-[4/3] w-full rounded-xl ring-4 ring-white/15" />}
-            >
-                <p className="mb-2 text-sm text-hero-foreground/75">
-                    {resort ? (
+        <main className={wrap}>
+            <Title
+                name={park.name}
+                status={currentStatus(park.statusHistory)}
+                line={statusLine(park.statusHistory)}
+                context={
+                    resort ? (
                         <>
-                            Part of{' '}
-                            <PreviewLink kind="resort" id={resort.id} className="underline underline-offset-2">
+                            In{' '}
+                            <PreviewLink kind="resort" id={resort.id} className={link}>
                                 {resort.name}
-                            </PreviewLink>{' '}
-                            ·{' '}
+                            </PreviewLink>
+                            , {countryName(park.country)}
                         </>
-                    ) : null}
-                    {countryName(park.country)}
-                </p>
-                <HeroTitle>{park.name}</HeroTitle>
-                <StatusChip text={statusLine(park.statusHistory)} />
-            </Hero>
-            <div className={cn(wrap, 'grid gap-8 py-8 lg:grid-cols-[1fr_18rem]')}>
-                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8">
-                    {rides.length > 0 && (
-                        <Rail title={`Rides (${rides.length})`}>
-                            {rides.map(ride => (
-                                <RailCard
-                                    key={ride.id}
-                                    kind="ride"
-                                    id={ride.id}
-                                    name={ride.name}
-                                    sub={`${ride.category} · ${ride.manufacturer}`}
-                                />
+                    ) : (
+                        countryName(park.country)
+                    )
+                }
+            />
+            <Placeholder name={park.name} className="aspect-[21/9] w-full rounded-sm" />
+            <Body
+                facts={
+                    <Facts
+                        rows={[
+                            ['Country', countryName(park.country)],
+                            ...(resort ? [['Resort', resort.name] as [string, string]] : []),
+                            ['Operator', park.operator],
+                            ['Opened', <PartialDate key="o" value={openedOf(park.statusHistory)} />],
+                            ...(park.website
+                                ? [
+                                      [
+                                          'Website',
+                                          <a key="w" className={link} href={park.website}>
+                                              {new URL(park.website).host}
+                                          </a>,
+                                      ] as [string, React.ReactNode],
+                                  ]
+                                : []),
+                        ]}
+                    />
+                }
+            >
+                <section>
+                    <h2 className={h2}>Status History</h2>
+                    <StatusLine rows={park.statusHistory} />
+                    <StatusTable rows={park.statusHistory} className="mt-6 max-w-md" />
+                </section>
+                {rides.length > 0 && (
+                    <section>
+                        <h2 className={h2}>Rides ({rides.length})</h2>
+                        <RideRows rides={rides} />
+                    </section>
+                )}
+                <section>
+                    <h2 className={h2}>Areas ({park.areas.length})</h2>
+                    {park.areas.length === 0 ? (
+                        <p className="text-muted-foreground">No Areas yet.</p>
+                    ) : (
+                        <ul className="columns-2 gap-8 sm:columns-3 [&>li]:py-1">
+                            {park.areas.map(area => (
+                                <li key={area}>{area}</li>
                             ))}
-                        </Rail>
+                        </ul>
                     )}
-                    <Panel title={`Areas (${park.areas.length})`}>
-                        {park.areas.length === 0 ? (
-                            <p className="text-sm text-muted-foreground italic">No Areas yet.</p>
-                        ) : (
-                            <ul className="flex flex-wrap gap-2">
-                                {park.areas.map(area => (
-                                    <li
-                                        key={area}
-                                        className="rounded-md bg-secondary px-2.5 py-1 text-sm text-secondary-foreground"
-                                    >
-                                        {area}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </Panel>
-                    <div className="grid gap-8 md:grid-cols-2">
-                        <Panel title="Status History">
-                            <StatusTable rows={park.statusHistory} />
-                        </Panel>
-                        <Panel title="Name History">
-                            <NameTable rows={park.nameHistory} />
-                        </Panel>
-                    </div>
-                </div>
-                <Facts
-                    rows={[
-                        ['Country', countryName(park.country)],
-                        ...(resort ? [['Resort', resort.name] as [string, string]] : []),
-                        ['Operator', park.operator],
-                        ['Status', status ? statusName(status) : '-'],
-                        ['Opened', <PartialDate key="o" value={opened(park)} />],
-                        ['Areas', park.areas.length],
-                        ...(park.website
-                            ? [
-                                  [
-                                      'Website',
-                                      <a key="w" className="text-primary underline" href={park.website}>
-                                          {new URL(park.website).host}
-                                      </a>,
-                                  ] as [string, React.ReactNode],
-                              ]
-                            : []),
-                    ]}
-                />
-            </div>
+                </section>
+                <section>
+                    <h2 className={h2}>Name History</h2>
+                    <NameTable rows={park.nameHistory} className="max-w-md" />
+                </section>
+            </Body>
         </main>
     );
 }
 
-function CountryList({ list, className }: { list: ParksList; className?: string }) {
+function CountryLinks({ list }: { list: ParksList }) {
     const item = (active: boolean) =>
         cn(
-            'flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left text-sm hover:bg-muted',
-            active && 'bg-primary text-primary-foreground hover:bg-primary',
+            'flex w-full justify-between py-1 text-left text-muted-foreground hover:text-foreground',
+            active && 'font-bold text-foreground',
         );
     return (
-        <ul className={cn('grid gap-0.5', className)}>
+        <ul>
             <li>
                 <button type="button" className={item(!list.country)} onClick={() => list.setCountry(undefined)}>
-                    All countries
+                    Everywhere
                 </button>
             </li>
             {list.countries.map(country => (
@@ -238,7 +262,7 @@ function CountryList({ list, className }: { list: ParksList; className?: string 
                         onClick={() => list.setCountry(country.code)}
                     >
                         {country.name}
-                        <span className="tabular text-xs opacity-70">{country.count}</span>
+                        <span className="tabular">{country.count}</span>
                     </button>
                 </li>
             ))}
@@ -248,67 +272,88 @@ function CountryList({ list, className }: { list: ParksList; className?: string 
 
 export function ParksPage() {
     const list = useParksList();
+    const search = useRef<HTMLInputElement>(null);
+    // `/` jumps to the name filter, as on most search-first sites
+    useEffect(() => {
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+                event.preventDefault();
+                search.current?.focus();
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, []);
     return (
-        <main>
-            <section className="bg-hero text-hero-foreground">
-                <div className={cn(wrap, 'py-10')}>
-                    <h1 className="font-display text-5xl font-extrabold tracking-tight">Parks</h1>
-                    <p className="mt-2 text-hero-foreground/80">
-                        {list.total} {list.country ? `in ${countryName(list.country)}` : 'worldwide'}
+        <main className={wrap}>
+            <div className="flex flex-wrap items-end justify-between gap-6 pt-12 pb-10">
+                <div>
+                    <h1 className="text-5xl font-extrabold tracking-[-0.025em] sm:text-6xl">Parks</h1>
+                    <p className="mt-2 text-muted-foreground">
+                        {list.total} {list.total === 1 ? 'Park' : 'Parks'}
+                        {list.country && ` in ${countryName(list.country)}`}
                     </p>
                 </div>
-            </section>
-            <div className={cn(wrap, 'grid gap-8 py-8 lg:grid-cols-[14rem_1fr]')}>
+                <label className="relative w-full sm:w-80">
+                    <span className="sr-only">Filter Parks by name</span>
+                    <input
+                        ref={search}
+                        value={list.query}
+                        onChange={event => list.setQuery(event.target.value)}
+                        placeholder="Filter by name"
+                        className="h-12 w-full border-0 border-b-2 border-input bg-transparent pr-8 text-lg outline-none placeholder:text-muted-foreground focus:border-foreground"
+                    />
+                    <kbd className="absolute top-3 right-0 rounded-sm border px-1.5 text-sm text-muted-foreground">
+                        /
+                    </kbd>
+                </label>
+            </div>
+            <div className="grid gap-12 pb-12 lg:grid-cols-[13rem_minmax(0,1fr)]">
                 <aside className="hidden lg:block">
-                    <h2 className="mb-2 px-3 font-display text-sm font-bold tracking-wider text-muted-foreground uppercase">
-                        Country
-                    </h2>
-                    <CountryList list={list} />
+                    <CountryLinks list={list} />
                 </aside>
                 <div>
-                    <div className="mb-4 lg:hidden">
+                    <div className="mb-6 lg:hidden">
                         <Sheet
                             title="Country"
                             trigger={
                                 <Button variant="outline">
-                                    <FilterIcon className="size-4" />{' '}
-                                    {list.country ? countryName(list.country) : 'Filter'}
+                                    {list.country ? countryName(list.country) : 'Everywhere'}
                                 </Button>
                             }
                         >
-                            <CountryList list={list} />
+                            <CountryLinks list={list} />
                         </Sheet>
                     </div>
-                    <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                        {list.parks.map(park => (
-                            <li key={park.id}>
-                                <PreviewLink
-                                    kind="park"
-                                    id={park.id}
-                                    className="group block h-full overflow-hidden rounded-lg border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                                >
-                                    <Placeholder name={park.name} className="aspect-[16/9] w-full" />
-                                    <div className="p-4">
-                                        <p className="line-clamp-2 font-display text-lg font-bold leading-snug group-hover:text-primary">
+                    {list.parks.length === 0 ? (
+                        <p className="text-lg">No Parks match “{list.query}”. Try fewer letters, or another country.</p>
+                    ) : (
+                        <ul className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-3">
+                            {list.parks.map(park => (
+                                <li key={park.id}>
+                                    <Link to="/parks/$park" params={{ park: park.id }} className="group block">
+                                        <Placeholder name={park.name} className="aspect-[4/3] w-full rounded-sm" />
+                                        <p className="mt-3 line-clamp-2 leading-snug font-bold group-hover:underline">
                                             {park.name}
                                         </p>
-                                        <p className="mt-1 text-sm text-muted-foreground">
-                                            {countryName(park.country)}
-                                        </p>
                                         {statusLine(park.statusHistory) && (
-                                            <p className="mt-2 text-xs font-medium">{statusLine(park.statusHistory)}</p>
+                                            <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                                                <StatusDot
+                                                    status={currentStatus(park.statusHistory)}
+                                                    className="size-2"
+                                                />
+                                                {statusLine(park.statusHistory)}
+                                            </p>
                                         )}
-                                    </div>
-                                </PreviewLink>
-                            </li>
-                        ))}
-                    </ul>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                     {list.hasMore && (
-                        <div className="mt-8 flex justify-center">
-                            <Button size="lg" onClick={list.loadMore}>
-                                Load more
-                            </Button>
-                        </div>
+                        <Button variant="outline" className="mt-12" onClick={list.loadMore}>
+                            Load more
+                        </Button>
                     )}
                 </div>
             </div>
@@ -320,121 +365,123 @@ export function RidePage({ ride }: { ride: Ride }) {
     const park = findPark(ride.park);
     const others = ridesIn(ride.park).filter(other => other.id !== ride.id);
     return (
-        <main>
-            <Hero
-                image={<Placeholder name={ride.name} className="aspect-[4/3] w-full rounded-xl ring-4 ring-white/15" />}
+        <main className={wrap}>
+            <Title
+                name={ride.name}
+                status={currentStatus(ride.statusHistory)}
+                line={statusLine(ride.statusHistory)}
+                context={
+                    park ? (
+                        <>
+                            {ride.category} at{' '}
+                            <PreviewLink kind="park" id={park.id} className={link}>
+                                {park.name}
+                            </PreviewLink>
+                        </>
+                    ) : (
+                        ride.category
+                    )
+                }
+            />
+            <Placeholder name={ride.name} className="aspect-[21/9] w-full rounded-sm" />
+            <Body
+                facts={
+                    <Facts
+                        rows={[
+                            ['Area', ride.area ?? 'Not recorded'],
+                            ['Manufacturer', ride.manufacturer],
+                            ['Ride Model', ride.model ?? 'None'],
+                            ['Height', ride.heightM ? `${ride.heightM} m` : 'Not recorded'],
+                            ['Top speed', ride.speedKmh ? `${ride.speedKmh} km/h` : 'Not recorded'],
+                            ['Opened', <PartialDate key="o" value={openedOf(ride.statusHistory)} />],
+                        ]}
+                    />
+                }
             >
-                <p className="mb-2 text-sm text-hero-foreground/75">
-                    {ride.category} at{' '}
-                    {park && (
-                        <PreviewLink kind="park" id={park.id} className="underline underline-offset-2">
-                            {park.name}
-                        </PreviewLink>
-                    )}
-                </p>
-                <HeroTitle>{ride.name}</HeroTitle>
-                <StatusChip text={statusLine(ride.statusHistory)} />
-            </Hero>
-            <div className={cn(wrap, 'grid gap-8 py-8 lg:grid-cols-[1fr_18rem]')}>
-                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8">
-                    <div className="grid gap-8 md:grid-cols-2">
-                        <Panel title="Status History">
-                            <StatusTable rows={ride.statusHistory} />
-                        </Panel>
-                        <Panel title="Name History">
-                            <NameTable rows={ride.nameHistory} />
-                        </Panel>
-                    </div>
-                    {others.length > 0 && park && (
-                        <Rail title={`More at ${park.name}`}>
-                            {others.map(other => (
-                                <RailCard
-                                    key={other.id}
-                                    kind="ride"
-                                    id={other.id}
-                                    name={other.name}
-                                    sub={other.category}
-                                />
-                            ))}
-                        </Rail>
-                    )}
-                </div>
-                <Facts
-                    rows={[
-                        ['Park', park?.name ?? '-'],
-                        ['Area', ride.area ?? '-'],
-                        ['Category', ride.category],
-                        ['Manufacturer', ride.manufacturer],
-                        ['Ride Model', ride.model ?? '-'],
-                        ['Height', ride.heightM ? `${ride.heightM} m` : '-'],
-                        ['Top speed', ride.speedKmh ? `${ride.speedKmh} km/h` : '-'],
-                        ['Opened', <PartialDate key="o" value={opened(ride)} />],
-                    ]}
-                />
-            </div>
+                <section>
+                    <h2 className={h2}>Status History</h2>
+                    <StatusLine rows={ride.statusHistory} />
+                    <StatusTable rows={ride.statusHistory} className="mt-6 max-w-md" />
+                </section>
+                <section>
+                    <h2 className={h2}>Name History</h2>
+                    <NameTable rows={ride.nameHistory} className="max-w-md" />
+                </section>
+                {park && others.length > 0 && (
+                    <section>
+                        <h2 className={h2}>Also at {park.name}</h2>
+                        <RideRows rides={others} />
+                    </section>
+                )}
+            </Body>
         </main>
     );
 }
 
 export function ResortPage({ resort }: { resort: Resort }) {
     return (
-        <main>
-            <Hero
-                image={
-                    <Placeholder name={resort.name} className="aspect-[4/3] w-full rounded-xl ring-4 ring-white/15" />
+        <main className={wrap}>
+            <Title
+                name={resort.name}
+                line={null}
+                context={`Resort in ${countryName(resort.country)} with ${resort.parks.length} ${resort.parks.length === 1 ? 'Park' : 'Parks'} and ${resort.hotels.length} ${resort.hotels.length === 1 ? 'Hotel' : 'Hotels'}`}
+            />
+            <Placeholder name={resort.name} className="aspect-[21/9] w-full rounded-sm" />
+            <Body
+                facts={
+                    <Facts
+                        rows={[
+                            ['Country', countryName(resort.country)],
+                            ['Operator', resort.operator],
+                        ]}
+                    />
                 }
             >
-                <p className="mb-2 text-sm text-hero-foreground/75">Resort · {countryName(resort.country)}</p>
-                <HeroTitle>{resort.name}</HeroTitle>
-                <p className="mt-4 text-hero-foreground/80">
-                    {resort.parks.length} {resort.parks.length === 1 ? 'Park' : 'Parks'} and {resort.hotels.length}{' '}
-                    {resort.hotels.length === 1 ? 'Hotel' : 'Hotels'}
-                </p>
-            </Hero>
-            <div className={cn(wrap, 'grid gap-8 py-8 lg:grid-cols-[1fr_18rem]')}>
-                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8">
-                    <Rail title="Parks">
+                <section>
+                    <h2 className={h2}>Parks</h2>
+                    <ul className="divide-y border-y">
                         {resort.parks.map(id => {
                             const park = findPark(id);
                             return park ? (
-                                <RailCard
-                                    key={id}
-                                    kind="park"
-                                    id={id}
-                                    name={park.name}
-                                    sub={statusLine(park.statusHistory)}
-                                />
+                                <li key={id} className="flex flex-wrap items-baseline justify-between gap-x-4 py-2.5">
+                                    <span className="flex items-center gap-2.5">
+                                        <StatusDot status={currentStatus(park.statusHistory)} />
+                                        <PreviewLink kind="park" id={id} className={link}>
+                                            {park.name}
+                                        </PreviewLink>
+                                    </span>
+                                    <span className="text-sm text-muted-foreground">
+                                        {statusLine(park.statusHistory)}
+                                    </span>
+                                </li>
                             ) : null;
                         })}
-                    </Rail>
-                    <Panel title="Hotels">
-                        <ul className="grid gap-3 sm:grid-cols-3">
-                            {resort.hotels.map(hotel => (
-                                <li key={hotel.name} className="flex items-center gap-3">
-                                    <Placeholder name={hotel.name} className="size-12 rounded-md" />
-                                    <div>
-                                        <p className="font-medium">{hotel.name}</p>
-                                        <p className="text-xs text-muted-foreground">
+                    </ul>
+                </section>
+                <section>
+                    <h2 className={h2}>Hotels</h2>
+                    <ul className="divide-y border-y">
+                        {resort.hotels.map(hotel => (
+                            <li key={hotel.name} className="flex justify-between gap-4 py-2.5">
+                                {hotel.name}
+                                <span className="text-sm text-muted-foreground">
+                                    {hotel.opened ? (
+                                        <>
                                             Opened <PartialDate value={hotel.opened} />
-                                        </p>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    </Panel>
-                    <Panel title="Name History">
-                        <NameTable rows={resort.nameHistory} />
-                    </Panel>
-                </div>
-                <Facts
-                    rows={[
-                        ['Country', countryName(resort.country)],
-                        ['Operator', resort.operator],
-                        ['Parks', resort.parks.length],
-                        ['Hotels', resort.hotels.length],
-                    ]}
-                />
-            </div>
+                                        </>
+                                    ) : (
+                                        'Opening date unknown'
+                                    )}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+                <section>
+                    <h2 className={h2}>Name History</h2>
+                    <NameTable rows={resort.nameHistory} className="max-w-md" />
+                </section>
+            </Body>
         </main>
     );
 }
@@ -442,39 +489,32 @@ export function ResortPage({ resort }: { resort: Resort }) {
 export function FormPage() {
     const state = useSampleForm();
     return (
-        <main>
-            <section className="bg-hero text-hero-foreground">
-                <div className={cn(wrap, 'py-10')}>
-                    <h1 className="font-display text-4xl font-extrabold tracking-tight">Suggest a Park</h1>
-                    <p className="mt-2 text-hero-foreground/80">
-                        A Moderator reviews every suggestion before it appears.
-                    </p>
-                </div>
-            </section>
-            <div className={cn(wrap, 'py-8')}>
-                <div className="max-w-2xl rounded-lg border bg-card p-6 shadow-sm">
-                    <SampleForm
-                        state={state}
-                        actions={
-                            <div className="flex gap-3">
-                                <Button type="submit">Submit suggestion</Button>
-                                <Button type="button" variant="ghost" onClick={state.showErrors}>
-                                    Show error states
-                                </Button>
-                            </div>
-                        }
-                    />
-                </div>
-            </div>
+        <main className={cn(wrap, 'max-w-xl py-12')}>
+            <h1 className="text-4xl font-extrabold tracking-[-0.025em]">Add a Park</h1>
+            <p className="mt-3 mb-10 text-muted-foreground">
+                A Moderator checks every new Park before anyone else sees it.
+            </p>
+            <SampleForm
+                state={state}
+                className="gap-7"
+                actions={
+                    <div className="flex items-center gap-6">
+                        <Button type="submit">Add Park</Button>
+                        <Button type="button" variant="link" className="px-0" onClick={state.showErrors}>
+                            Show error states
+                        </Button>
+                    </div>
+                }
+            />
         </main>
     );
 }
 
 export function Footer({ children }: { children: React.ReactNode }) {
     return (
-        <footer className="mt-12 bg-header text-header-foreground/70">
-            <div className={cn(wrap, 'flex h-16 items-center justify-between text-sm')}>
-                <span>Data ODbL · Code AGPL</span>
+        <footer className="mt-16 border-t">
+            <div className={cn(wrap, 'flex flex-wrap justify-between gap-4 py-8 text-sm text-muted-foreground')}>
+                <span>Data under ODbL, code under AGPL</span>
                 {children}
             </div>
         </footer>

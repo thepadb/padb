@@ -5,22 +5,24 @@ import type * as React from 'react';
 import { cn } from '@/lib/utils';
 
 export const buttonVariants = cva(
-    'inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-[color,background-color,box-shadow,translate] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 rounded-md design-c:rounded-full design-c:border-2 design-c:border-foreground design-c:font-semibold design-b:font-mono design-b:text-xs design-b:uppercase design-b:tracking-wider',
+    [
+        'inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold outline-none transition-[background-color,color,translate,box-shadow] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50',
+        'rounded-sm',
+        'design-b:rounded-[3px] design-b:font-medium',
+        'design-c:rounded-full design-c:border-2 design-c:border-foreground design-c:font-display design-c:font-normal design-c:shadow-[0_4px_0_var(--foreground)] design-c:active:translate-y-1 design-c:active:shadow-none',
+    ],
     {
         variants: {
             variant: {
-                default:
-                    'bg-primary text-primary-foreground hover:bg-primary/90 design-c:shadow-[3px_3px_0_var(--foreground)] design-c:hover:-translate-y-px',
-                outline:
-                    'border border-input bg-background hover:bg-muted design-c:shadow-[3px_3px_0_var(--foreground)]',
-                ghost: 'hover:bg-muted design-c:border-transparent',
-                link: 'text-primary underline-offset-4 hover:underline design-c:border-transparent',
+                default: 'bg-primary text-primary-foreground hover:bg-primary/85',
+                outline: 'border border-input bg-transparent hover:bg-muted design-c:bg-card',
+                ghost: 'hover:bg-muted design-c:border-transparent design-c:shadow-none',
+                link: 'underline underline-offset-4 hover:decoration-2 design-c:border-transparent design-c:shadow-none',
             },
             size: {
-                default: 'h-9 px-4',
+                default: 'h-10 px-4 text-sm',
                 sm: 'h-8 px-3 text-xs',
-                lg: 'h-11 px-6 text-base',
-                icon: 'size-9',
+                lg: 'h-12 px-6 text-base',
             },
         },
         defaultVariants: { variant: 'default', size: 'default' },
