@@ -38,7 +38,7 @@ const shown = (value: string | null) => (value ? partialDateName(value) : null);
 
 const cell = (selected: boolean, current = false) =>
     cn(
-        'h-10 rounded-md text-sm tabular outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring',
+        'h-full min-h-0 rounded-md text-sm tabular outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring',
         current && 'font-semibold text-primary',
         selected && 'bg-primary text-primary-foreground hover:bg-primary',
     );
@@ -46,7 +46,7 @@ const cell = (selected: boolean, current = false) =>
 function YearGrid({ selected, onPick }: { selected?: number; onPick: (year: number) => void }) {
     const [start, setStart] = useState(() => Math.floor((selected ?? THIS_YEAR) / 12) * 12);
     return (
-        <div>
+        <div className="flex h-full flex-col">
             <div className="mb-1 flex items-center justify-between">
                 <Button size="sm" variant="ghost" onClick={() => setStart(s => s - 12)} aria-label="Earlier years">
                     <ChevronLeftIcon className="size-4" />
@@ -58,7 +58,7 @@ function YearGrid({ selected, onPick }: { selected?: number; onPick: (year: numb
                     <ChevronRightIcon className="size-4" />
                 </Button>
             </div>
-            <div className="grid grid-cols-4 gap-1">
+            <div className="grid min-h-0 flex-1 grid-cols-4 grid-rows-3 gap-1">
                 {Array.from({ length: 12 }, (_, i) => start + i).map(year => (
                     <button
                         key={year}
@@ -77,7 +77,7 @@ function YearGrid({ selected, onPick }: { selected?: number; onPick: (year: numb
 
 function MonthGrid({ selected, onPick }: { selected?: number; onPick: (month: number) => void }) {
     return (
-        <div className="grid grid-cols-3 gap-1">
+        <div className="grid h-full grid-cols-3 grid-rows-4 gap-1">
             {MONTHS.map(month => (
                 <button
                     key={month}
@@ -106,7 +106,8 @@ function DayGrid({
     onPick: (day: number) => void;
 }) {
     return (
-        <div className="grid grid-cols-7 gap-0.5">
+        // Always six weeks of rows, so every month is the same height
+        <div className="grid h-full grid-cols-7 grid-rows-[auto_repeat(6,minmax(0,1fr))] gap-0.5">
             {WEEKDAYS.map(day => (
                 <span key={day} className="grid h-7 place-items-center text-xs text-muted-foreground">
                     {day}
@@ -120,7 +121,7 @@ function DayGrid({
                 <button
                     key={day}
                     type="button"
-                    className={cn(cell(day === selected), 'h-9')}
+                    className={cell(day === selected)}
                     aria-pressed={day === selected}
                     aria-label={`${day} ${monthName(month)} ${year}`}
                     onClick={() => onPick(day)}
@@ -175,49 +176,65 @@ function useDraft({ value, onChange }: PickerProps) {
     };
 }
 
+/** One fixed height for years, months and days, so the popup never changes size. */
 function Body({ draft, setDraft }: { draft: Parts; setDraft: (parts: Parts) => void }) {
-    if (!draft.year) return <YearGrid onPick={year => setDraft({ year })} />;
-    if (!draft.month) return <MonthGrid onPick={month => setDraft({ year: draft.year, month })} />;
     return (
-        <DayGrid
-            year={draft.year}
-            month={draft.month}
-            selected={draft.day}
-            onPick={day => setDraft({ ...draft, day: day === draft.day ? undefined : day })}
-        />
+        <div className="h-64">
+            {draft.year ? (
+                draft.month ? (
+                    <DayGrid
+                        year={draft.year}
+                        month={draft.month}
+                        selected={draft.day}
+                        onPick={day => setDraft({ ...draft, day: day === draft.day ? undefined : day })}
+                    />
+                ) : (
+                    <MonthGrid onPick={month => setDraft({ year: draft.year, month })} />
+                )
+            ) : (
+                <YearGrid onPick={year => setDraft({ year })} />
+            )}
+        </div>
     );
 }
 
-/** A: drill from years to months to days; Undo takes off the last part; Save at any level. */
+/** Clear, Undo and Save. Save wakes up the moment the draft differs from what is saved. */
+function Footer({ state, saved }: { state: ReturnType<typeof useDraft>; saved: string | null }) {
+    const { draft, setDraft } = state;
+    const undo = () => setDraft(draft.day ? { ...draft, day: undefined } : draft.month ? { year: draft.year } : {});
+    return (
+        <div className="mt-3 flex items-center gap-2 border-t pt-3">
+            <Button variant="ghost" size="sm" onClick={() => setDraft({})} disabled={!draft.year}>
+                Clear
+            </Button>
+            <Button variant="ghost" size="sm" className="ml-auto" onClick={undo} disabled={!draft.year}>
+                <Undo2Icon className="size-4" /> Undo
+            </Button>
+            <Button size="sm" onClick={state.save} disabled={format(draft) === saved}>
+                Save
+            </Button>
+        </div>
+    );
+}
+
+/** A: drill from years to months to days; the box at the top shows the date so far. */
 export function DrillUndo(props: PickerProps) {
     const state = useDraft(props);
     const { draft, setDraft } = state;
-    const undo = () => setDraft(draft.day ? { ...draft, day: undefined } : draft.month ? { year: draft.year } : {});
     return (
         <Popover.Root open={state.open} onOpenChange={state.onOpenChange}>
             <Popover.Trigger render={<Trigger value={props.value} />} id={props.id} />
             <Popover.Portal>
                 <Popover.Positioner sideOffset={6} align="start" className="z-50">
                     <Popover.Popup className={popup}>
-                        <output className={cn(inputClasses, 'flex items-center font-medium')} aria-live="polite">
+                        <Popover.Title className="sr-only">Choose a date</Popover.Title>
+                        <output className={cn(inputClasses, 'mb-3 flex items-center font-medium')} aria-live="polite">
                             {shown(format(draft)) ?? (
                                 <span className="font-normal text-muted-foreground">No date yet</span>
                             )}
                         </output>
-                        <Popover.Title className="mt-3 mb-2 h-5 text-sm font-semibold">
-                            {state.view === 'month' && draft.year}
-                            {state.view === 'day' && draft.month && `${monthName(draft.month)} ${draft.year}`}
-                            {state.view === 'year' && <span className="sr-only">Choose a year</span>}
-                        </Popover.Title>
                         <Body draft={draft} setDraft={setDraft} />
-                        <div className="mt-3 flex justify-end gap-2 border-t pt-3">
-                            <Button variant="ghost" size="sm" onClick={undo} disabled={!draft.year}>
-                                <Undo2Icon className="size-4" /> Undo
-                            </Button>
-                            <Button size="sm" onClick={state.save}>
-                                Save
-                            </Button>
-                        </div>
+                        <Footer state={state} saved={props.value} />
                     </Popover.Popup>
                 </Popover.Positioner>
             </Popover.Portal>
@@ -245,7 +262,7 @@ export function DrillTrail(props: PickerProps) {
                                 }[state.view]
                             }
                         </Popover.Title>
-                        <div className="mb-3 flex min-h-10 flex-wrap items-center gap-1 border-b pb-2 text-lg font-semibold">
+                        <div className="mb-3 flex h-12 items-center gap-1 overflow-hidden border-b pb-2 text-lg font-semibold">
                             {!draft.year && <span className="px-1.5 font-normal text-muted-foreground">Any year</span>}
                             {draft.day && (
                                 <button
@@ -279,14 +296,7 @@ export function DrillTrail(props: PickerProps) {
                             )}
                         </div>
                         <Body draft={draft} setDraft={setDraft} />
-                        <div className="mt-3 flex justify-between gap-2 border-t pt-3">
-                            <Button variant="ghost" size="sm" onClick={() => setDraft({})} disabled={!draft.year}>
-                                Clear
-                            </Button>
-                            <Button size="sm" onClick={state.save}>
-                                Save
-                            </Button>
-                        </div>
+                        <Footer state={state} saved={props.value} />
                     </Popover.Popup>
                 </Popover.Positioner>
             </Popover.Portal>
@@ -520,13 +530,13 @@ export const PICKERS: Array<{
     {
         key: 'A',
         name: 'Drill with Undo',
-        idea: 'Years, then months, then days. Undo takes off the last part; Save at any level.',
+        idea: 'Years, then months, then days, with the date so far in a box at the top.',
         Picker: DrillUndo,
     },
     {
         key: 'B',
         name: 'Drill with a trail',
-        idea: 'The same drill. The heading is the date so far; click a part to choose it again.',
+        idea: 'The same drill. The heading is the date so far; click a part to remove it.',
         Picker: DrillTrail,
     },
     {
