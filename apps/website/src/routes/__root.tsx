@@ -1,7 +1,7 @@
-import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
-import { sourceCodeLink } from '../lib/source-code';
-
-const sourceCode = sourceCodeLink(import.meta.env.VITE_COMMIT_SHA);
+import { createRootRoute, HeadContent, Link, Outlet, Scripts } from '@tanstack/react-router';
+import { Shell } from '@/components/shell';
+import { pageHeading, textLink } from '@/components/text';
+import appCss from '@/styles.css?url';
 
 export const Route = createRootRoute({
     head: () => ({
@@ -10,6 +10,7 @@ export const Route = createRootRoute({
             { name: 'viewport', content: 'width=device-width, initial-scale=1' },
             { title: 'Parks & Attractions Database' },
         ],
+        links: [{ rel: 'stylesheet', href: appCss }],
     }),
     component: RootDocument,
     notFoundComponent: NotFound,
@@ -22,10 +23,9 @@ function RootDocument() {
                 <HeadContent />
             </head>
             <body>
-                <Outlet />
-                <footer>
-                    <a href={sourceCode.href}>{sourceCode.label}</a>
-                </footer>
+                <Shell>
+                    <Outlet />
+                </Shell>
                 <Scripts />
             </body>
         </html>
@@ -34,9 +34,14 @@ function RootDocument() {
 
 function NotFound() {
     return (
-        <main>
-            <h1>Not found</h1>
-            <p>There is nothing at this address. The link may be wrong.</p>
-        </main>
+        <>
+            <h1 className={pageHeading}>Not found</h1>
+            <p className="mt-2 text-muted-foreground">There is nothing at this address. The link may be wrong.</p>
+            <p className="mt-6">
+                <Link to="/" className={textLink}>
+                    Go to the home page
+                </Link>
+            </p>
+        </>
     );
 }

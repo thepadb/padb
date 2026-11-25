@@ -7,22 +7,34 @@
         "dev": "vite dev --port 3100",
         "build": "vite build",
         "start": "srvx serve --prod --entry dist/server/server.js --static ../client",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "test": "vitest run",
+        "test:e2e": "playwright test"
     },
     "dependencies": {
+        "@base-ui/react": "^1.9.0",
+        "@fontsource-variable/ibm-plex-sans": "^5.3.0",
         "@padb/api-client": "workspace:*",
+        "@tailwindcss/vite": "^4.3.5",
         "@tanstack/react-router": "^1.170.46",
         "@tanstack/react-start": "^1.169.7",
+        "class-variance-authority": "^0.7.1",
+        "cn": "^0.5.2",
+        "lucide-react": "^1.79.0",
         "react": "^19.3.1",
         "react-dom": "^19.3.1",
-        "srvx": "^1.0.8"
+        "srvx": "^1.0.8",
+        "tailwindcss": "^4.3.5"
     },
     "devDependencies": {
+        "@axe-core/playwright": "^4.14.0",
+        "@playwright/test": "^1.65.1",
         "@types/node": "^26.6.6",
         "@types/react": "^19.3.0",
         "@types/react-dom": "^19.3.0",
         "@vitejs/plugin-react": "^6.3.0",
         "typescript": "^7.0.2",
-        "vite": "^8.3.8"
+        "vite": "^8.3.8",
+        "vitest": "^5.1.1"
     }
 }

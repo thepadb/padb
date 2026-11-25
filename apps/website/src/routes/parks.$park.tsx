@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import { partialDateName } from '../lib/partial-date';
 import { countryName, parkId } from '../lib/park';
 import { statusName } from '../lib/status';
+import { pageHeading, quietNote, sectionHeading } from '@/components/text';
 
 const getPark = createServerFn({ method: 'GET' })
     .validator((id: string) => id)
@@ -36,28 +37,28 @@ export const Route = createFileRoute('/parks/$park')({
 function ParkPage() {
     const park = Route.useLoaderData();
     return (
-        <main>
-            <h1>{park.name}</h1>
-            <dl>
-                <dt>Country</dt>
+        <>
+            <h1 className={pageHeading}>{park.name}</h1>
+            <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
+                <dt className="text-muted-foreground">Country</dt>
                 <dd>{countryName(park)}</dd>
             </dl>
-            <h2>Areas</h2>
+            <h2 className={sectionHeading}>Areas</h2>
             {park.areas.length === 0 ? (
-                <p>No Areas yet.</p>
+                <p className={quietNote}>No Areas yet.</p>
             ) : (
-                <ul>
+                <ul className="space-y-1 text-sm">
                     {park.areas.map(area => (
                         <li key={area.id}>{area.name}</li>
                     ))}
                 </ul>
             )}
-            <h2>Status History</h2>
+            <h2 className={sectionHeading}>Status History</h2>
             {park.status_history.length === 0 ? (
-                <p>No Status History yet.</p>
+                <p className={quietNote}>No Status History yet.</p>
             ) : (
                 // In the order saved, not sorted by date. See ADR 0010
-                <ol>
+                <ol className="space-y-1 text-sm">
                     {park.status_history.map((entry, position) => (
                         // biome-ignore lint/suspicious/noArrayIndexKey: entries have no IDs and a Status can recur
                         <li key={position}>
@@ -74,12 +75,12 @@ function ParkPage() {
                     ))}
                 </ol>
             )}
-            <h2>Name History</h2>
+            <h2 className={sectionHeading}>Name History</h2>
             {park.name_history.length === 0 ? (
-                <p>No Name History yet.</p>
+                <p className={quietNote}>No Name History yet.</p>
             ) : (
                 // In the order saved, not sorted by date. See ADR 0010
-                <ol>
+                <ol className="space-y-1 text-sm">
                     {park.name_history.map((entry, position) => (
                         // biome-ignore lint/suspicious/noArrayIndexKey: entries have no IDs and a name can recur
                         <li key={position}>
@@ -96,6 +97,6 @@ function ParkPage() {
                     ))}
                 </ol>
             )}
-        </main>
+        </>
     );
 }

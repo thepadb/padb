@@ -20,3 +20,7 @@ dist/
 
 # Rust
 target/
+
+# Playwright
+test-results/
+playwright-report/

@@ -1,0 +1,76 @@
+# Design guide
+
+How the website looks and how to build pages in that look. Follow it for any UI work. The look is design F, "Workbench" (#43): a tool for people who browse and edit. Grey panes, white sheets of detail, teal links, highlighter yellow for the selection. ADR 0019 records the stack.
+
+## Stack
+
+* Tailwind CSS v4 for all styling; no other CSS but `src/styles.css`.
+* Components follow shadcn/ui on Base UI: copied into `src/components/ui` and owned by us, then fitted to the tokens below. Add one with `pnpm dlx shadcn@latest add <name>` from `apps/website`; `components.json` picks Base UI.
+* `cn()` from the `cn` package (shadcn's own) joins class names, later Tailwind classes winning.
+* Icons from `lucide-react`, with `aria-hidden="true"` unless the icon is the only label.
+* IBM Plex Sans (variable), self-hosted through Fontsource, is the only font. Never load fonts from a third party.
+
+## Tokens
+
+All colours, the font and radii are defined once in `apps/website/src/styles.css`: CSS custom properties on `:root` for light, overridden under `prefers-color-scheme: dark`, and exposed to Tailwind in `@theme inline`.
+
+**No raw colours in components.** Never write a hex, `rgb()`, or a Tailwind palette colour (`bg-white`, `text-gray-500`, `text-red-600`). Use the token names, which switch with the theme:
+
+| Token | Use for |
+| --- | --- |
+| `background` / `foreground` | Grey panes behind sheets; body text |
+| `card` | Sheets, the header and footer, popovers |
+| `primary` / `primary-foreground` | Links (teal), primary buttons, focus rings |
+| `secondary` / `secondary-foreground` | Active nav items, quiet tinted fills |
+| `muted` / `muted-foreground` | Hover fills; secondary text, notes, labels |
+| `accent` / `accent-foreground` | Highlighter yellow: the current selection only |
+| `destructive` | Errors |
+| `border`, `input`, `ring` | Dividers, field borders, focus |
+| `status-operating`, `status-paused`, `status-stopped`, `status-none` | A Status's dot or mark: green, amber, red, grey |
+
+A new colour is a new token, light and dark, added to `styles.css`, never a one-off. Dark follows the operating system; there is no manual switch.
+
+## The shell
+
+Every page renders inside `Shell` (`src/components/shell.tsx`), applied once in `__root.tsx`:
+
+* **Header**: the PADB wordmark (links home) and the top nav (`nav` labelled "Main"). The active item uses `secondary`.
+* **Sheet**: the `main` landmark, a white card on the grey pane. A page renders its content straight into it and never adds its own `main`. Its `h1` is the page's name.
+* **Footer**: licences and the link to the running commit (ADR 0011).
+* A "Skip to content" link, the first thing focused, moves focus to the sheet.
+
+The not found page renders inside the shell with a link home, so a bad link never strands anyone.
+
+## Page conventions
+
+Shared text styles live in `src/components/text.ts`; use them rather than copying their classes.
+
+* Headings: `pageHeading` for the `h1`, `sectionHeading` for a section's `h2`.
+* Links in text: `textLink`, teal and underlined, so they don't rely on colour alone.
+* Quiet notes for empty data (`No Areas yet.`): `quietNote`.
+* Partial Dates are shown at their own precision, never padded (ADR 0010); use `partialDateName`.
+
+## Editing in place
+
+Not built yet; Accounts and Review build it to this pattern, rather than separate forms.
+
+* Every fact on a sheet has a pencil. Editing it shows the current value struck through beside the suggestion, for a Moderator to review. Until Review exists, edits go live immediately.
+* **Name**: the pencil asks "It was renamed" (adds a Name History entry, prefilled with the current name) or "Fix a mistake" (corrects the last entry).
+* **Status**: "The Status changed" (adds a Status History entry, with the new Status left empty) or "Fix the current one" (replaces the last entry).
+
+## Accessibility bar
+
+WCAG 2.2 AA, in light and dark.
+
+* Landmarks (`banner`, `nav` with a label, `main`, `contentinfo`) and one `h1` per page, with headings in order.
+* Every interactive element reachable by keyboard and visibly focused; the global focus ring uses `ring`.
+* Text and controls meet AA contrast in both themes; check new tokens in both.
+* Never convey meaning by colour alone (e.g. a Status dot has its name beside it).
+
+## Tests
+
+* `just test-e2e` runs Playwright with axe. It starts Postgres, empties a `padb_e2e` database, and runs an API and website of their own (ports 3197 to 3199), so it never touches dev data or tests another checkout's running site. Put specs in `apps/website/e2e`.
+* Add the data a page needs with `addPark` from `e2e/seed.ts`, through the internal API. Names get a random suffix, so tests can run in parallel; never rely on the database being empty.
+* Every page gets `expectShell` and an axe check in light and dark with `expectAccessible`, both from `e2e/expectations.ts`; set the theme with `page.emulateMedia({ colorScheme })`.
+* `just test-unit` runs Vitest on `src/**/*.test.ts`, for pure functions.
+* Test what a person sees (roles, names, text), never markup or class names. No screenshot comparisons.

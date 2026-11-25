@@ -14,7 +14,8 @@ Parks & Attractions Database (PADB): an open, community-edited database of parks
 
 ## Stack
 
-* Website: TanStack Start (TypeScript) in `apps/website`, with Better Auth for accounts (ADR 0013)
+* Website: TanStack Start (TypeScript) in `apps/website`, with Better Auth for accounts (ADR 0013), styled with Tailwind and shadcn/ui on Base UI (ADR 0019)
+* Website tests: Vitest for units, Playwright with axe for pages
 * API: Rust in `apps/api`: axum, sqlx (compile-checked SQL and migrations, no ORM), utoipa for the OpenAPI spec
 * Database: PostgreSQL on the `postgis/postgis` image (ADR 0015)
 * API client: generated from the OpenAPI spec with openapi-typescript and openapi-fetch, in `packages/`
@@ -31,6 +32,10 @@ apps/website    TanStack Start site
 packages/       Shared code
 docs/agents/    Docs for agents
 ```
+
+## UI
+
+Follow the [design guide](docs/agents/design.md) for any UI work: tokens, the shell, no raw colours, and the accessibility bar.
 
 ## Git workflow
 

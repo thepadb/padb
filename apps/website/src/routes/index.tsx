@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { pageHeading, textLink } from '@/components/text';
 
 export const Route = createFileRoute('/')({
     component: HomePage,
@@ -6,12 +7,16 @@ export const Route = createFileRoute('/')({
 
 function HomePage() {
     return (
-        <main>
-            <h1>Parks & Attractions Database</h1>
-            <p>An open, community-edited database of parks, rides and attractions. Coming soon.</p>
-            <p>
-                <Link to="/parks">Browse Parks</Link>
+        <>
+            <h1 className={pageHeading}>Parks & Attractions Database</h1>
+            <p className="mt-2 text-muted-foreground">
+                An open, community-edited database of parks, rides and attractions. Coming soon.
             </p>
-        </main>
+            <p className="mt-6">
+                <Link to="/parks" className={textLink}>
+                    Browse Parks
+                </Link>
+            </p>
+        </>
     );
 }

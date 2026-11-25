@@ -43,7 +43,7 @@ docs/         Project and agent docs
 ### Commands
 
 ```sh
-just install      # install JS dependencies
+just install      # install JS dependencies and Playwright's Chromium
 just serve        # start local Postgres (PostGIS image) on localhost:5432
 just migrate      # apply database migrations
 just prepare      # save the API's queries to .sqlx after changing any SQL
@@ -52,7 +52,9 @@ just website      # run the website on localhost:3100
 just generate     # regenerate packages/api-client from the running API's OpenAPI spec
 just lint         # rustfmt, clippy, Biome and TypeScript
 just format       # fix formatting
-just test         # run all tests
+just test         # run all tests but the browser ones
+just test-unit    # run the website's Vitest unit tests
+just test-e2e     # run the website's Playwright and axe tests against their own API, website and database
 just down         # stop local services
 just docker-build # build the API and website images
 just docker-up    # run both images against local Postgres

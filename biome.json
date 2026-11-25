@@ -57,6 +57,7 @@
             }
         }
     },
+    "css": { "parser": { "tailwindDirectives": true } },
     "javascript": {
         "formatter": {
             "arrowParentheses": "asNeeded",

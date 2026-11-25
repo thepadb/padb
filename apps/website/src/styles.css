@@ -1,0 +1,104 @@
+/* PADB's look: design F, "Workbench" (#43). Every colour, font and radius lives here, once. See ADR 0019 */
+/* Scans only src: the image has no .gitignore, so automatic detection would read the client build in dist
+   and give the server build a different stylesheet from the one the client serves. */
+@import "tailwindcss" source(".");
+@import "@fontsource-variable/ibm-plex-sans";
+
+/* Components use these names (bg-card, text-primary, ...), never raw colours. */
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--foreground);
+    --color-popover: var(--card);
+    --color-popover-foreground: var(--foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-status-operating: var(--status-operating);
+    --color-status-paused: var(--status-paused);
+    --color-status-stopped: var(--status-stopped);
+    --color-status-none: var(--status-none);
+    --font-sans: "IBM Plex Sans Variable", system-ui, sans-serif;
+    --radius-sm: 0.25rem;
+    --radius-md: 0.375rem;
+    --radius-lg: 0.5rem;
+}
+
+/* Light: grey panes, white sheets, teal links, highlighter yellow for the selection */
+:root {
+    color-scheme: light;
+    --background: #eceef2;
+    --foreground: #1d2330;
+    --card: #ffffff;
+    --primary: #0b6e8a;
+    --primary-foreground: #ffffff;
+    --secondary: #dcedf2;
+    --secondary-foreground: #0a5266;
+    --muted: #f3f4f6;
+    --muted-foreground: #5b6474;
+    --accent: #ffe680;
+    --accent-foreground: #1d2330;
+    --destructive: #c42f2f;
+    --border: #d6dae1;
+    --input: #b9c0cb;
+    --ring: #0b6e8a;
+    --status-operating: #1a8f5c;
+    --status-paused: #c98500;
+    --status-stopped: #cf3b3b;
+    --status-none: #8d95a3;
+}
+
+/* Dark follows the operating system; there is no manual switch (#43) */
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+        --background: #15181e;
+        --foreground: #e4e7ec;
+        --card: #1d2129;
+        --primary: #5cc3dc;
+        --primary-foreground: #12161c;
+        --secondary: #1d3640;
+        --secondary-foreground: #bfe6f0;
+        --muted: #232831;
+        --muted-foreground: #9aa3b2;
+        --accent: #5a4d12;
+        --accent-foreground: #fff3c2;
+        --destructive: #ef6b6b;
+        --border: #2e343f;
+        --input: #4a5260;
+        --ring: #5cc3dc;
+        --status-operating: #4cc48a;
+        --status-paused: #e6a93a;
+        --status-stopped: #ef6b6b;
+        --status-none: #737c8b;
+    }
+}
+
+@layer base {
+    * {
+        border-color: var(--color-border);
+    }
+    html {
+        background: var(--color-background);
+        color: var(--color-foreground);
+        font-family: var(--font-sans);
+    }
+    body {
+        min-height: 100dvh;
+        -webkit-font-smoothing: antialiased;
+    }
+    :focus-visible {
+        outline: 2px solid var(--color-ring);
+        outline-offset: 2px;
+    }
+}
