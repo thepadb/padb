@@ -1,10 +1,10 @@
-import { createFileRoute, notFound } from '@tanstack/react-router';
+import { createFileRoute, Link, notFound } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import { api } from '../lib/api';
-import { partialDateName } from '../lib/partial-date';
-import { countryName, parkId } from '../lib/park';
-import { statusName } from '../lib/status';
-import { pageHeading, quietNote, sectionHeading } from '@/components/text';
+import { api } from '@/lib/api';
+import { countryName, parkId } from '@/lib/park';
+import { Breadcrumbs, EmptyNote, Facts, HistoryTable, Placeholder, Section, StatusName } from '@/components/sheet';
+import { compactText, pageHeading, textLink } from '@/components/text';
+import { cn } from 'cn';
 
 const getPark = createServerFn({ method: 'GET' })
     .validator((id: string) => id)
@@ -34,69 +34,62 @@ export const Route = createFileRoute('/parks/$park')({
     component: ParkPage,
 });
 
+// Every block but the placeholder sits in the first column; from xl the placeholder moves beside them.
+const firstColumn = 'xl:col-start-1';
+
 function ParkPage() {
     const park = Route.useLoaderData();
     return (
-        <>
-            <h1 className={pageHeading}>{park.name}</h1>
-            <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
-                <dt className="text-muted-foreground">Country</dt>
-                <dd>{countryName(park)}</dd>
-            </dl>
-            <h2 className={sectionHeading}>Areas</h2>
-            {park.areas.length === 0 ? (
-                <p className={quietNote}>No Areas yet.</p>
-            ) : (
-                <ul className="space-y-1 text-sm">
-                    {park.areas.map(area => (
-                        <li key={area.id}>{area.name}</li>
-                    ))}
-                </ul>
-            )}
-            <h2 className={sectionHeading}>Status History</h2>
-            {park.status_history.length === 0 ? (
-                <p className={quietNote}>No Status History yet.</p>
-            ) : (
-                // In the order saved, not sorted by date. See ADR 0010
-                <ol className="space-y-1 text-sm">
-                    {park.status_history.map((entry, position) => (
-                        // biome-ignore lint/suspicious/noArrayIndexKey: entries have no IDs and a Status can recur
-                        <li key={position}>
-                            {statusName(entry.status)}
-                            {entry.began ? (
-                                <>
-                                    {' from '}
-                                    <time dateTime={entry.began}>{partialDateName(entry.began)}</time>
-                                </>
-                            ) : (
-                                ', date unknown'
-                            )}
-                        </li>
-                    ))}
-                </ol>
-            )}
-            <h2 className={sectionHeading}>Name History</h2>
-            {park.name_history.length === 0 ? (
-                <p className={quietNote}>No Name History yet.</p>
-            ) : (
-                // In the order saved, not sorted by date. See ADR 0010
-                <ol className="space-y-1 text-sm">
-                    {park.name_history.map((entry, position) => (
-                        // biome-ignore lint/suspicious/noArrayIndexKey: entries have no IDs and a name can recur
-                        <li key={position}>
-                            {entry.name}
-                            {entry.first_used ? (
-                                <>
-                                    {', first used '}
-                                    <time dateTime={entry.first_used}>{partialDateName(entry.first_used)}</time>
-                                </>
-                            ) : (
-                                ', date unknown'
-                            )}
-                        </li>
-                    ))}
-                </ol>
-            )}
-        </>
+        <div className="grid xl:grid-cols-[minmax(0,1fr)_15rem] xl:gap-x-10">
+            <Breadcrumbs className={firstColumn}>
+                {[
+                    <Link key="parks" to="/parks" className={textLink}>
+                        Parks
+                    </Link>,
+                    park.name,
+                ]}
+            </Breadcrumbs>
+            <Placeholder
+                name={park.name}
+                className="mt-4 aspect-[3/1] w-full rounded-md xl:col-start-2 xl:row-span-5 xl:row-start-1 xl:mt-0 xl:aspect-square"
+            />
+            <h1 className={cn(pageHeading, firstColumn, 'mt-4 mb-8 text-balance break-words')}>{park.name}</h1>
+            <Section title="Details" className={firstColumn}>
+                {/* Coordinates join Country once Parks have them (#34) */}
+                <Facts facts={[{ label: 'Country', value: countryName(park) }]} />
+            </Section>
+            <Section title="Areas" count={park.areas.length} className={firstColumn}>
+                {park.areas.length === 0 ? (
+                    <EmptyNote>No Areas yet.</EmptyNote>
+                ) : (
+                    <ul className="flex flex-wrap gap-1.5">
+                        {park.areas.map(area => (
+                            <li key={area.id} className={cn(compactText, 'rounded-md border bg-muted px-2 py-0.5')}>
+                                {area.name}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </Section>
+            <div className={cn(firstColumn, 'grid gap-x-8 md:grid-cols-2')}>
+                <Section title="Status History" count={park.status_history.length}>
+                    <HistoryTable
+                        headings={['Status', 'From']}
+                        rows={park.status_history.map(entry => [
+                            <StatusName key="status" status={entry.status} />,
+                            entry.began,
+                        ])}
+                        empty="No Status History yet."
+                    />
+                </Section>
+                <Section title="Name History" count={park.name_history.length}>
+                    <HistoryTable
+                        headings={['Name', 'First used']}
+                        rows={park.name_history.map(entry => [entry.name, entry.first_used])}
+                        empty="No Name History yet."
+                    />
+                </Section>
+            </div>
+        </div>
     );
 }
