@@ -26,7 +26,8 @@ All colours, the font and radii are defined once in `apps/website/src/styles.css
 | `accent` / `accent-foreground` | Highlighter yellow: the current selection only |
 | `destructive` | Errors |
 | `border`, `input`, `ring` | Dividers, field borders, focus |
-| `status-operating`, `status-paused`, `status-stopped`, `status-none` | A Status's dot or mark: green, amber, red, grey |
+| `status-operating`, `status-paused`, `status-stopped`, `status-none` | A Status's dot or mark: green, amber, red, grey; `statusTone` picks one |
+| `placeholder` / `placeholder-foreground` | A photo placeholder's tint and initials; the hue comes from the record's name |
 
 A new colour is a new token, light and dark, added to `styles.css`, never a one-off. Dark follows the operating system; there is no manual switch.
 
@@ -47,8 +48,21 @@ Shared text styles live in `src/components/text.ts`; use them rather than copyin
 
 * Headings: `pageHeading` for the `h1`, `sectionHeading` for a section's `h2`.
 * Links in text: `textLink`, teal and underlined, so they don't rely on colour alone.
-* Quiet notes for empty data (`No Areas yet.`): `quietNote`.
-* Partial Dates are shown at their own precision, never padded (ADR 0010); use `partialDateName`.
+* Quiet notes for empty data (`No Areas yet.`): `quietNote`, or `EmptyNote` on a sheet.
+* Partial Dates are shown at their own precision, never padded (ADR 0010); use `PartialDate`, or `partialDateName` for plain text.
+
+## A record's sheet
+
+A record's page (the Park page first; Rides and Resorts later) fills the sheet in this order, built from `src/components/sheet.tsx`:
+
+1. **Breadcrumbs** (`Breadcrumbs`): the trail from the top-level list, e.g. Parks → the Park, the last item the page itself.
+2. **Placeholder** (`Placeholder`): a tinted block with the record's initials where its photo will go, decorative and hidden from screen readers. A full-width 3:1 strip; from `xl` a square beside the sections, so nothing shifts when photos arrive.
+3. **Name**: the `h1`.
+4. **Details** (`Section` with `Facts`): the record's own facts, one labelled row each. For a Park, its country (coordinates join it with #34).
+5. **Lists and histories**, each a `Section` ruled off from the one above with its count beside the title (none when empty, where the quiet note says so). For a Park: Areas as chips, then Status History and Name History side by side from `md`, as compact tables (`HistoryTable`) in the order saved (ADR 0010).
+
+* Dates go through `PartialDate`, which shows a Partial Date at its precision and an unknown one as "Unknown"; a Status through `StatusName`, its dot beside its name.
+* An empty section keeps its heading and says so with a quiet note (`EmptyNote`), e.g. `No Areas yet.`, so the sheet's shape never changes.
 
 ## Editing in place
 

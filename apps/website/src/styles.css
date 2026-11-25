@@ -28,6 +28,12 @@
     --color-status-paused: var(--status-paused);
     --color-status-stopped: var(--status-stopped);
     --color-status-none: var(--status-none);
+    /* A photo placeholder's tint: lightness and chroma per theme, hue per record (--placeholder-hue) */
+    --color-placeholder: oklch(var(--placeholder-lightness) var(--placeholder-chroma) var(--placeholder-hue, 0));
+    /* Opaque, unlike F's prototype, so the initials meet AA contrast */
+    --color-placeholder-foreground: oklch(
+        var(--placeholder-ink) calc(var(--placeholder-chroma) * 0.8) var(--placeholder-hue, 0)
+    );
     --font-sans: "IBM Plex Sans Variable", system-ui, sans-serif;
     --radius-sm: 0.25rem;
     --radius-md: 0.375rem;
@@ -56,6 +62,9 @@
     --status-paused: #c98500;
     --status-stopped: #cf3b3b;
     --status-none: #8d95a3;
+    --placeholder-lightness: 0.9;
+    --placeholder-chroma: 0.03;
+    --placeholder-ink: 0.45;
 }
 
 /* Dark follows the operating system; there is no manual switch (#43) */
@@ -81,6 +90,8 @@
         --status-paused: #e6a93a;
         --status-stopped: #ef6b6b;
         --status-none: #737c8b;
+        --placeholder-lightness: 0.3;
+        --placeholder-ink: 0.72;
     }
 }
 
