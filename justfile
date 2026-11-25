@@ -12,10 +12,11 @@ default:
 
 ##### Development #####
 
-# Install dependencies
+# Install dependencies, and the browser Playwright tests run in
 [group("Development")]
 install:
     pnpm install
+    pnpm --filter @padb/website exec playwright install chromium
 
 # Run the API: public on port 3000, internal on localhost:3001
 [group("Development")]
@@ -137,8 +138,20 @@ format:
     cargo fmt --all
     pnpm format
 
-# Run all tests
+# Run all tests but the browser ones
 [group("Checks")]
 test:
     cargo test --workspace --locked
     pnpm -r --if-present test
+
+# Run the website's unit tests with Vitest; pass a file to run only its tests
+[group("Checks")]
+test-unit *args:
+    pnpm --filter @padb/website test {{ args }}
+
+# Run the website's browser tests with Playwright and axe, against an API and website of their own on an emptied padb_e2e database
+[group("Checks")]
+test-e2e *args: serve
+    docker compose exec -T db dropdb --username padb --if-exists --force padb_e2e
+    docker compose exec -T db createdb --username padb padb_e2e
+    pnpm --filter @padb/website test:e2e {{ args }}

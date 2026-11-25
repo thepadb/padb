@@ -2,6 +2,8 @@ import { createFileRoute, Link, notFound } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { api } from '../lib/api';
 import { countryName, parkParam } from '../lib/park';
+import { pageHeading, quietNote, textLink } from '@/components/text';
+import { cn } from 'cn';
 
 type Search = { after?: string };
 
@@ -37,15 +39,15 @@ export const Route = createFileRoute('/parks/')({
 function ParksPage() {
     const { parks, next, isFirstPage } = Route.useLoaderData();
     return (
-        <main>
-            <h1>Parks</h1>
+        <>
+            <h1 className={pageHeading}>Parks</h1>
             {parks.length === 0 ? (
-                <p>No Parks yet.</p>
+                <p className={cn(quietNote, 'mt-4')}>No Parks yet.</p>
             ) : (
-                <ul>
+                <ul className="mt-4 space-y-1">
                     {parks.map(park => (
                         <li key={park.id}>
-                            <Link to="/parks/$park" params={{ park: parkParam(park) }}>
+                            <Link to="/parks/$park" params={{ park: parkParam(park) }} className={textLink}>
                                 {park.name}
                             </Link>{' '}
                             ({countryName(park)})
@@ -53,14 +55,18 @@ function ParksPage() {
                     ))}
                 </ul>
             )}
-            <nav aria-label="Pages">
-                {!isFirstPage && <Link to="/parks">First page</Link>}{' '}
+            <nav aria-label="Pages" className="mt-6 flex gap-4">
+                {!isFirstPage && (
+                    <Link to="/parks" className={textLink}>
+                        First page
+                    </Link>
+                )}
                 {next && (
-                    <Link to="/parks" search={{ after: next }}>
+                    <Link to="/parks" search={{ after: next }} className={textLink}>
                         Next page
                     </Link>
                 )}
             </nav>
-        </main>
+        </>
     );
 }
