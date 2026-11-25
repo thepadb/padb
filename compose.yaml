@@ -9,8 +9,8 @@ services:
             POSTGRES_PASSWORD: padb
             POSTGRES_DB: padb
         ports:
-            # Override with DB_PORT if 5432 is taken
-            - "127.0.0.1:${DB_PORT:-5432}:5432"
+            # Not 5432, so a host Postgres never answers in its place; override with DB_PORT
+            - "127.0.0.1:${DB_PORT:-55432}:5432"
         volumes:
             # Postgres 18+ images keep data under /var/lib/postgresql/<major>
             - db-data:/var/lib/postgresql

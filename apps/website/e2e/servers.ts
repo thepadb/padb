@@ -5,4 +5,4 @@ export const apiUrl = 'http://127.0.0.1:3198';
 export const internalApiUrl = 'http://127.0.0.1:3197';
 
 /** A database of its own, emptied by `just test-e2e` before each run, so tests never touch dev data. */
-export const databaseUrl = `postgres://padb:padb@localhost:${process.env.DB_PORT ?? '5432'}/padb_e2e`;
+export const databaseUrl = `postgres://padb:padb@localhost:${process.env.DB_PORT ?? '55432'}/padb_e2e`;

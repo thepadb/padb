@@ -1,5 +1,6 @@
 # Local development database; matches compose.yaml
-export DB_PORT := env("DB_PORT", "5432")
+# Not 5432, so a Postgres installed on the host never answers in its place
+export DB_PORT := env("DB_PORT", "55432")
 export DATABASE_URL := env("DATABASE_URL", "postgres://padb:padb@localhost:" + DB_PORT + "/padb")
 
 # Pinned by digest: a moved tag cannot change what scans the images
@@ -77,6 +78,14 @@ cleanup issue:
 # Start local Postgres in the background
 [group("Database")]
 serve:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # A host Postgres on the same port answers first, silently, so stop before it can.
+    if command -v lsof >/dev/null && lsof -nP -iTCP:"$DB_PORT" -sTCP:LISTEN -Fc 2>/dev/null | grep -qx 'cpostgres'; then
+        echo "A Postgres on this machine is already listening on port $DB_PORT."
+        echo "Stop it, or pick a free port for PADB's database with DB_PORT, e.g. \`DB_PORT=55433 just serve\`, and keep it set for later commands."
+        exit 1
+    fi
     docker compose up -d --wait
 
 # Stop local services
