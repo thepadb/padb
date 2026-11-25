@@ -36,11 +36,24 @@ A new colour is a new token, light and dark, added to `styles.css`, never a one-
 Every page renders inside `Shell` (`src/components/shell.tsx`), applied once in `__root.tsx`:
 
 * **Header**: the PADB wordmark (links home) and the top nav (`nav` labelled "Main"). The active item uses `secondary`.
+* **Browse tree**: on the left from `lg`, beside the sheet (below). Hidden on narrower screens until the mobile layout (#49) gives it a way in.
 * **Sheet**: the `main` landmark, a white card on the grey pane. A page renders its content straight into it and never adds its own `main`. Its `h1` is the page's name.
 * **Footer**: licences and the link to the running commit (ADR 0011).
 * A "Skip to content" link, the first thing focused, moves focus to the sheet.
 
 The not found page renders inside the shell with a link home, so a bad link never strands anyone.
+
+## The browse tree
+
+`BrowseTree` (`src/components/browse-tree.tsx`), a `nav` labelled "Browse", lets people move between records without going back to a list. The shell gives it to every page.
+
+* **Levels**: for now only Parks, a list labelled "Parks", oldest first as `/v1/parks` gives them. Later specs grow it to the full order **Country → Destination → Park → Rides** (ADR 0009): a Country lists its Destinations (Resorts and Parks with no Resort), a Resort its Parks, a Park its Rides. Country comes once a countries endpoint exists. Areas never appear; they are not pages of their own.
+* **Each level opens on demand**, fetched when opened. Levels open when the page loads (for now, the first page of Parks) are fetched on the server by the root route's loader, so nothing flickers in. The loader fetches once and the tree stays mounted, so Parks already loaded stay as people move between pages. "Load more" announces how many Parks it brought through a polite status.
+* **Paging**: "Load more" under a level fetches its next page through a server function and appends it; when the last page arrives the button goes, and focus moves to the first record it brought.
+* **Selection**: the record being viewed is the only row in `accent` (highlighter yellow), with `aria-current="page"`. It is matched by ID, so `/parks/<id>` without its slug still highlights. If its page of the level isn't loaded yet, it is shown after a `⋯` gap at the end of the level, where the oldest-first order puts it, taken from its own page's loader so it renders on the server too; once "Load more" brings it, it moves into place.
+* **Failure**: the tree never takes a page down. If a page cannot be fetched, on the server or by "Load more", it says "Parks could not be loaded." in `destructive`, through the same polite status, and the button becomes "Try again".
+* The button appears only once the page has hydrated, since pressed before then it would do nothing.
+* Rows are plain links, one per record, truncated to one line; expanding a level is a button with `aria-expanded` once there are levels to expand.
 
 ## Page conventions
 

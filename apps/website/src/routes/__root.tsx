@@ -1,4 +1,5 @@
 import { createRootRoute, HeadContent, Link, Outlet, Scripts } from '@tanstack/react-router';
+import { BrowseTree, getTreeParks } from '@/components/browse-tree';
 import { Shell } from '@/components/shell';
 import { pageHeading, textLink } from '@/components/text';
 import appCss from '@/styles.css?url';
@@ -12,18 +13,22 @@ export const Route = createRootRoute({
         ],
         links: [{ rel: 'stylesheet', href: appCss }],
     }),
+    // The tree's open levels arrive with the page, fetched once; the tree keeps what it loads after that itself
+    loader: async () => ({ treeParks: await getTreeParks({ data: undefined }) }),
+    staleTime: Number.POSITIVE_INFINITY,
     component: RootDocument,
     notFoundComponent: NotFound,
 });
 
 function RootDocument() {
+    const { treeParks } = Route.useLoaderData();
     return (
         <html lang="en-GB">
             <head>
                 <HeadContent />
             </head>
             <body>
-                <Shell>
+                <Shell tree={<BrowseTree firstPage={treeParks} />}>
                     <Outlet />
                 </Shell>
                 <Scripts />

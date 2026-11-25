@@ -4,10 +4,10 @@ import { sourceCodeLink } from '@/lib/source-code';
 
 const sourceCode = sourceCodeLink(import.meta.env.VITE_COMMIT_SHA);
 
-/** The frame of every page: header, the sheet the page fills, and the footer. */
-export function Shell({ children }: { children: React.ReactNode }) {
+/** The frame of every page: header, the browse tree beside the sheet the page fills, and the footer. */
+export function Shell({ tree, children }: { tree: React.ReactNode; children: React.ReactNode }) {
     return (
-        <div className="flex min-h-dvh flex-col">
+        <div className="grid min-h-dvh grid-rows-[auto_1fr_auto]">
             <a
                 href="#content"
                 className="sr-only rounded-md bg-card px-3 py-2 font-medium text-primary focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50"
@@ -15,11 +15,19 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 Skip to content
             </a>
             <Header />
-            {/* The browse tree joins this row beside the sheet (#47) */}
-            <div className="flex-1 p-2 sm:p-4">
-                <main id="content" tabIndex={-1} className="rounded-lg border bg-card px-4 py-5 sm:px-8 sm:py-7">
-                    {children}
-                </main>
+            <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
+                {/* Below lg the sheet takes the full width; phones get their own way in (#49) */}
+                {/* The tree is taken out of flow so only the sheet grows the page; it scrolls within the row instead */}
+                <aside className="relative hidden min-h-64 border-r lg:block">
+                    <div className="absolute inset-0">
+                        <div className="sticky top-0 h-full max-h-dvh overflow-y-auto">{tree}</div>
+                    </div>
+                </aside>
+                <div className="min-w-0 p-2 sm:p-4">
+                    <main id="content" tabIndex={-1} className="rounded-lg border bg-card px-4 py-5 sm:px-8 sm:py-7">
+                        {children}
+                    </main>
+                </div>
             </div>
             <Footer />
         </div>
