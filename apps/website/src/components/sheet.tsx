@@ -7,7 +7,7 @@ import type * as React from 'react';
 import { partialDateName } from '@/lib/partial-date';
 import { initials, placeholderHue } from '@/lib/placeholder';
 import { type StatusTone, statusName, statusTone } from '@/lib/status';
-import { compactText, quietNote, sectionHeading } from './text';
+import { compactText, pageHeading, quietNote, sectionHeading } from './text';
 
 /** The trail from a top-level page to this one; the last item is the page itself. */
 export function Breadcrumbs({ children, className }: { children: Array<React.ReactNode>; className?: string }) {
@@ -39,6 +39,16 @@ export function Placeholder({ name, className }: { name: string; className?: str
             style={{ '--placeholder-hue': placeholderHue(name) } as React.CSSProperties}
         >
             <span className="text-[clamp(0.75rem,28cqh,7rem)] leading-none tracking-tight">{initials(name)}</span>
+        </div>
+    );
+}
+
+/** A record's name as the page's `h1`, with its status line under it when it has one. */
+export function RecordName({ name, line, className }: { name: string; line: string | null; className?: string }) {
+    return (
+        <div className={className}>
+            <h1 className={cn(pageHeading, 'text-balance break-words')}>{name}</h1>
+            {line && <p className="mt-1.5 text-muted-foreground">{line}</p>}
         </div>
     );
 }

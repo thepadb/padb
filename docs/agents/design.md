@@ -57,12 +57,24 @@ A record's page (the Park page first; Rides and Resorts later) fills the sheet i
 
 1. **Breadcrumbs** (`Breadcrumbs`): the trail from the top-level list, e.g. Parks → the Park, the last item the page itself.
 2. **Placeholder** (`Placeholder`): a tinted block with the record's initials where its photo will go, decorative and hidden from screen readers. A full-width 3:1 strip; from `xl` a square beside the sections, so nothing shifts when photos arrive.
-3. **Name**: the `h1`.
+3. **Name** (`RecordName`): the `h1`, with the status line under it (below), when the record has a Status History.
 4. **Details** (`Section` with `Facts`): the record's own facts, one labelled row each. For a Park, its country (coordinates join it with #34).
 5. **Lists and histories**, each a `Section` ruled off from the one above with its count beside the title (none when empty, where the quiet note says so). For a Park: Areas as chips, then Status History and Name History side by side from `md`, as compact tables (`HistoryTable`) in the order saved (ADR 0010).
 
 * Dates go through `PartialDate`, which shows a Partial Date at its precision and an unknown one as "Unknown"; a Status through `StatusName`, its dot beside its name.
 * An empty section keeps its heading and says so with a quiet note (`EmptyNote`), e.g. `No Areas yet.`, so the sheet's shape never changes.
+
+## Status line
+
+One line under a record's name saying what it is now and since when, worked out from its Status History by `statusLine` (`src/lib/status.ts`). The Park page uses it, and the Preview Card (#43) will; never word it by hand. Entries are read in the order saved, the last one current:
+
+* **Operating ever since it first operated**: "Operating since 1980", the date it first operated.
+* **Operating again after any other Status**: "Reopened 2005, originally opened 1971": its latest operating entry, then when it first operated. Any Status but operating (refurbishing and SBNO included) is closed in effect, since nobody could ride or visit; only Statuses after it first operated count.
+* **Another ongoing Status** (refurbishing, SBNO, under construction, announced): "Refurbishing since April 2025, opened 1979".
+* **A final Status** (closed, demolished, relocated), without "since": "Demolished 2009, opened 1971".
+* **Never operated**: the current Status alone, with no opening, e.g. "Under construction since 2024".
+* An entry with no date drops its date part ("Demolished, opened 1971"; an undated first opening drops ", opened ..." altogether). No Status History, no line.
+* Dates are Partial Dates at their own precision, never padded (ADR 0010). The line is plain muted text; a Status's dot belongs to `StatusName`, not here.
 
 ## Editing in place
 
