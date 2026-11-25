@@ -2,8 +2,18 @@ import { createFileRoute, Link, notFound } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { api } from '@/lib/api';
 import { countryName, parkId } from '@/lib/park';
-import { Breadcrumbs, EmptyNote, Facts, HistoryTable, Placeholder, Section, StatusName } from '@/components/sheet';
-import { compactText, pageHeading, textLink } from '@/components/text';
+import { statusLine } from '@/lib/status';
+import {
+    Breadcrumbs,
+    EmptyNote,
+    Facts,
+    HistoryTable,
+    Placeholder,
+    RecordName,
+    Section,
+    StatusName,
+} from '@/components/sheet';
+import { compactText, textLink } from '@/components/text';
 import { cn } from 'cn';
 
 const getPark = createServerFn({ method: 'GET' })
@@ -53,7 +63,11 @@ function ParkPage() {
                 name={park.name}
                 className="mt-4 aspect-[3/1] w-full rounded-md xl:col-start-2 xl:row-span-5 xl:row-start-1 xl:mt-0 xl:aspect-square"
             />
-            <h1 className={cn(pageHeading, firstColumn, 'mt-4 mb-8 text-balance break-words')}>{park.name}</h1>
+            <RecordName
+                name={park.name}
+                line={statusLine(park.status_history)}
+                className={cn(firstColumn, 'mt-4 mb-8')}
+            />
             <Section title="Details" className={firstColumn}>
                 {/* Coordinates join Country once Parks have them (#34) */}
                 <Facts facts={[{ label: 'Country', value: countryName(park) }]} />

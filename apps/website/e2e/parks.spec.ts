@@ -76,6 +76,18 @@ test.describe('the Park page', () => {
         await expect(names.getByRole('row').nth(1).getByRole('cell')).toHaveText(['Lakeside Gardens', '29 May 1971']);
     });
 
+    test('says under the name what the Park is now and since when', async ({ page }) => {
+        // Rules for every Status History are unit tested with statusLine
+        await page.goto(`/parks/${full.id}`);
+        const name = page.getByRole('main').getByRole('heading', { level: 1, name: full.name });
+        const line = page.getByRole('main').getByText('Demolished, opened May 1971', { exact: true });
+        await expect(line).toBeVisible();
+        const [nameBox, lineBox] = await Promise.all([name.boundingBox(), line.boundingBox()]);
+        expect(lineBox?.y ?? Number.NaN).toBeGreaterThanOrEqual(
+            (nameBox?.y ?? Number.NaN) + (nameBox?.height ?? Number.NaN),
+        );
+    });
+
     test('says when a Park has nothing recorded yet', async ({ page }) => {
         await page.goto(`/parks/${empty.id}`);
         const sheet = page.getByRole('main');
