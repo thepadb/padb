@@ -126,8 +126,11 @@ test.describe('the Parks list', () => {
         await page.goto('/parks');
         const sheet = page.getByRole('main');
         await expect(sheet.getByRole('heading', { level: 1, name: 'Parks' })).toBeVisible();
-        await sheet.getByRole('link', { name: full.name }).click();
-        await expect(page.getByRole('main').getByRole('heading', { level: 1, name: full.name })).toBeVisible();
+        // Other specs add enough Parks to push this file's onto later pages, so take the first
+        const first = sheet.getByRole('listitem').first().getByRole('link');
+        const name = await first.textContent();
+        await first.click();
+        await expect(page.getByRole('main').getByRole('heading', { level: 1, name: name ?? '' })).toBeVisible();
         await expectShell(page);
     });
 

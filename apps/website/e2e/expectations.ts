@@ -12,11 +12,12 @@ export async function expectAccessible(page: Page) {
     );
 }
 
-/** The shell every page sits in: header with wordmark and nav, the sheet, and the footer's source link. */
+/** The shell every page sits in: header with wordmark and nav, the browse tree, the sheet, and the footer's source link. */
 export async function expectShell(page: Page) {
     const header = page.getByRole('banner');
     await expect(header.getByRole('link', { name: 'PADB' })).toHaveAttribute('href', '/');
     await expect(header.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Parks' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Browse' })).toBeVisible();
     await expect(page.getByRole('main')).toBeVisible();
     await expect(page.getByRole('contentinfo').getByRole('link', { name: /^Source/ })).toHaveAttribute(
         'href',
