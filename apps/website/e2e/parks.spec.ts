@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { expectAccessible, expectShell } from './expectations';
 import { addPark } from './seed';
 
-// The Parks pages in the shell. Their own layout and behaviour are tested by #45 and #48.
+// The Park page in the shell. The Parks list is tested in parks-list.spec.ts.
 
 const colorSchemes = ['light', 'dark'] as const;
 
@@ -118,27 +118,5 @@ test.describe('the Park page', () => {
                 await expectAccessible(page);
             });
         }
-    }
-});
-
-test.describe('the Parks list', () => {
-    test('sits inside the shell and links to each Park', async ({ page }) => {
-        await page.goto('/parks');
-        const sheet = page.getByRole('main');
-        await expect(sheet.getByRole('heading', { level: 1, name: 'Parks' })).toBeVisible();
-        // Other specs add enough Parks to push this file's onto later pages, so take the first
-        const first = sheet.getByRole('listitem').first().getByRole('link');
-        const name = await first.textContent();
-        await first.click();
-        await expect(page.getByRole('main').getByRole('heading', { level: 1, name: name ?? '' })).toBeVisible();
-        await expectShell(page);
-    });
-
-    for (const colorScheme of colorSchemes) {
-        test(`passes axe in ${colorScheme}`, async ({ page }) => {
-            await page.emulateMedia({ colorScheme });
-            await page.goto('/parks');
-            await expectAccessible(page);
-        });
     }
 });

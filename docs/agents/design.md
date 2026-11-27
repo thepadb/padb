@@ -49,7 +49,7 @@ The not found page renders inside the shell with a link home, so a bad link neve
 
 * **Levels**: for now only Parks, a list labelled "Parks", oldest first as `/v1/parks` gives them. Later specs grow it to the full order **Country → Destination → Park → Rides** (ADR 0009): a Country lists its Destinations (Resorts and Parks with no Resort), a Resort its Parks, a Park its Rides. Country comes once a countries endpoint exists. Areas never appear; they are not pages of their own.
 * **Each level opens on demand**, fetched when opened. Levels open when the page loads (for now, the first page of Parks) are fetched on the server by the root route's loader, so nothing flickers in. The loader fetches once and the tree stays mounted, so Parks already loaded stay as people move between pages. "Load more" announces how many Parks it brought through a polite status.
-* **Paging**: "Load more" under a level fetches its next page through a server function and appends it; when the last page arrives the button goes, and focus moves to the first record it brought.
+* **Paging**: "Load more" under a level fetches its next page through a server function and appends it, through `usePages` (`src/lib/use-pages.ts`); when the last page arrives the button goes, and focus moves to the first record it brought.
 * **Selection**: the record being viewed is the only row in `accent` (highlighter yellow), with `aria-current="page"`. It is matched by ID, so `/parks/<id>` without its slug still highlights. If its page of the level isn't loaded yet, it is shown after a `⋯` gap at the end of the level, where the oldest-first order puts it, taken from its own page's loader so it renders on the server too; once "Load more" brings it, it moves into place.
 * **Failure**: the tree never takes a page down. If a page cannot be fetched, on the server or by "Load more", it says "Parks could not be loaded." in `destructive`, through the same polite status, and the button becomes "Try again".
 * The button appears only once the page has hydrated, since pressed before then it would do nothing.
@@ -76,6 +76,14 @@ A record's page (the Park page first; Rides and Resorts later) fills the sheet i
 
 * Dates go through `PartialDate`, which shows a Partial Date at its precision and an unknown one as "Unknown"; a Status through `StatusName`, its dot beside its name.
 * An empty section keeps its heading and says so with a quiet note (`EmptyNote`), e.g. `No Areas yet.`, so the sheet's shape never changes.
+
+## A list of records
+
+The Parks list (`src/routes/parks.index.tsx`) is the pattern for lists of records.
+
+* **Cards**: a grid of cards, each one link to its record: the `Placeholder` with the record's initials as a square, then its name, its country and its current Status (`StatusName`). Never Preview Cards on grids (#43).
+* **Filter**: a `select` labelled "Country", customisable (`appearance: base-select`) where the browser supports it and native elsewhere, listing every country the API accepts (`countries` in `src/lib/country.ts`) with its `flag` emoji on the left, hidden from screen readers, and "Every country" first. The choice is kept in the URL (`?country=GB`) and fetched on the server, so a filtered list can be linked and renders without JavaScript; before hydration it is a GET form with a "Show" button. A country the API would refuse shows every country. An empty list says so: "No Parks in Antarctica yet."
+* **Paging**: "Load more" works as in the browse tree, through `usePages` (`src/lib/use-pages.ts`): it appends the next page, says how many it brought or that Parks could not be loaded through a polite status, becomes "Try again" on failure, goes with the last page and moves focus to the first record it brought. Changing the filter starts again from the first page.
 
 ## Status line
 
