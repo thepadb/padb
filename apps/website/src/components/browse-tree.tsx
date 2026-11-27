@@ -4,9 +4,10 @@ import type { Park } from '@padb/api-client';
 import { Link, useMatch } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { LoaderIcon } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { api } from '@/lib/api';
 import { parkParam } from '@/lib/park';
+import { useHydrated, usePages } from '@/lib/use-pages';
 
 type TreePark = Pick<Park, 'id' | 'name'>;
 
@@ -34,43 +35,29 @@ function useViewedPark(): TreePark | undefined {
     return match?.loaderData ? { id: match.loaderData.id, name: match.loaderData.name } : undefined;
 }
 
-/** True once React has taken over the server's markup, so buttons do something when pressed. */
-function useHydrated() {
-    const [hydrated, setHydrated] = useState(false);
-    useEffect(() => setHydrated(true), []);
-    return hydrated;
-}
-
 /** The tree, starting from the first page of Parks, which the server renders with the page. */
 export function BrowseTree({ firstPage }: { firstPage: TreePage | null }) {
-    const [parks, setParks] = useState(firstPage?.parks ?? []);
-    // The page the button asks for: a cursor, undefined for the first page, or null once all are in
-    const [cursor, setCursor] = useState<string | null | undefined>(firstPage ? firstPage.next : undefined);
-    const [loading, setLoading] = useState(false);
-    const [failed, setFailed] = useState(firstPage === null);
-    const [announcement, setAnnouncement] = useState('');
     const list = useRef<HTMLUListElement>(null);
     const hydrated = useHydrated();
     const viewed = useViewedPark();
+    const {
+        items: parks,
+        hasMore,
+        loading,
+        failed,
+        announcement,
+        load,
+    } = usePages({
+        firstPage: firstPage && { items: firstPage.parks, next: firstPage.next },
+        fetchPage: async after => {
+            const page = await getTreeParks({ data: after });
+            return page && { items: page.parks, next: page.next };
+        },
+        list,
+        announce: count => `${count} more Parks loaded.`,
+    });
     // Parks come oldest first, so one not loaded yet belongs after the gap "Load more" fills
     const pinned = viewed && !parks.some(park => park.id === viewed.id) ? viewed : undefined;
-
-    async function load() {
-        if (cursor === null || loading) return;
-        setLoading(true);
-        const page = await getTreeParks({ data: cursor }).catch(() => null);
-        setLoading(false);
-        setFailed(page === null);
-        if (!page) return;
-        const shown = parks.length;
-        setParks(previous => [...previous, ...page.parks.filter(park => !previous.some(p => p.id === park.id))]);
-        setCursor(page.next);
-        setAnnouncement(`${page.parks.length} more Parks loaded.`);
-        // The button goes with the last page, so focus moves to the first Park it brought
-        if (!page.next) {
-            requestAnimationFrame(() => list.current?.querySelectorAll('a')[shown]?.focus());
-        }
-    }
 
     const row = (park: TreePark) => (
         <li key={park.id}>
@@ -102,12 +89,12 @@ export function BrowseTree({ firstPage }: { firstPage: TreePage | null }) {
                     </>
                 )}
             </ul>
-            {parks.length === 0 && cursor === null && <p className="px-2 py-1 text-muted-foreground">No Parks yet.</p>}
+            {parks.length === 0 && !hasMore && <p className="px-2 py-1 text-muted-foreground">No Parks yet.</p>}
             <p role="status" className={failed ? 'px-2 py-1 text-destructive' : 'sr-only'}>
                 {failed ? 'Parks could not be loaded.' : announcement}
             </p>
             {/* Only once hydrated: pressed before then, it would do nothing */}
-            {hydrated && cursor !== null && (
+            {hydrated && hasMore && (
                 <button
                     type="button"
                     onClick={load}
